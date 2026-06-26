@@ -5,7 +5,7 @@ Enable all 7 built-in Pi tools: `read`, `bash`, `edit`, `write`, `grep`, `find`,
 ## Install
 
 ```bash
-pi install git:github.com/RealAlexandreAI/pi-all-tools
+pi install npm:pi-all-tools
 ```
 
 ## What it does
