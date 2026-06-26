@@ -1,0 +1,9 @@
+{
+  "name": "pi-all-tools",
+  "version": "1.0.0",
+  "description": "Enable all 7 built-in Pi tools by default (read, bash, edit, write, grep, find, ls)",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./extensions"]
+  }
+}
