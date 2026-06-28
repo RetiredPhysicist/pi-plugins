@@ -33,15 +33,17 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
   });
 
   const text = await resp.text();
-  const lines = text.split("\n");
+  // Handle CRLF line endings from SSE
+  const lines = text.split(/\r?\n/);
   let currentData = "";
 
   for (const line of lines) {
-    if (line.startsWith("data: ")) {
-      currentData = line.slice(6);
-    } else if (line.startsWith("event: ")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("data: ")) {
+      currentData = trimmed.slice(6);
+    } else if (trimmed.startsWith("event: ")) {
       // ignore event type
-    } else if (line.trim() === "" && currentData) {
+    } else if (trimmed === "" && currentData) {
       // empty line after data = end of event
       try {
         const parsed = JSON.parse(currentData);
