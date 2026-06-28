@@ -34,15 +34,36 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
 
   const text = await resp.text();
   const lines = text.split("\n");
+  let currentData = "";
+
   for (const line of lines) {
     if (line.startsWith("data: ")) {
+      currentData = line.slice(6);
+    } else if (line.startsWith("event: ")) {
+      // ignore event type
+    } else if (line.trim() === "" && currentData) {
+      // empty line after data = end of event
       try {
-        return JSON.parse(line.slice(6));
+        const parsed = JSON.parse(currentData);
+        if (parsed.result || parsed.error) {
+          return parsed;
+        }
       } catch {
         // continue
       }
+      currentData = "";
     }
   }
+
+  // Handle case where data is last line (no trailing empty line)
+  if (currentData) {
+    try {
+      return JSON.parse(currentData);
+    } catch {
+      // ignore
+    }
+  }
+
   return null;
 }
 
