@@ -1,14 +1,23 @@
 {
   "name": "pi-nocturne-memory",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nocturne Memory extension for Pi — automated memory management with SessionStart boot protocol",
   "license": "MIT",
   "type": "module",
   "repository": "github:RealAlexandreAI/pi-nocturne-memory",
-  "keywords": ["pi-package", "pi", "memory", "extension"],
+  "keywords": [
+    "pi-package",
+    "pi",
+    "memory",
+    "extension"
+  ],
   "pi": {
-    "extensions": ["./extensions"],
-    "hooks": ["./hooks/session-start.sh"]
+    "extensions": [
+      "./extensions"
+    ],
+    "hooks": [
+      "./hooks/session-start.sh"
+    ]
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "^0.80.0"
