@@ -1,9 +1,23 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
-const MCP_URL = "https://dejavu.example.com/mcp";
-const MCP_AUTH = "REDACTED";
+const CONFIG_PATH = join(homedir(), ".pi", "nocturne-memory.json");
+
+function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
+  try {
+    return JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+const config = loadConfig();
+const MCP_URL = config.mcpUrl ?? "https://dejavu.example.com/mcp";
+const MCP_AUTH = config.mcpAuth ?? "REDACTED";
 
 const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"];
 
