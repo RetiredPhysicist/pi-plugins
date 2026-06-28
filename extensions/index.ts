@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const CONFIG_PATH = join(homedir(), ".pi", "nocturne-memory.json");
+const CONFIG_PATH = join(homedir(), ".pi", "pi-nocturne-memory.json");
 
 function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
   try {
