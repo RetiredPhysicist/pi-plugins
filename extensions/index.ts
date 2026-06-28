@@ -50,7 +50,7 @@ function extractText(data: any): string {
   return data?.result?.content?.[0]?.text ?? "";
 }
 
-export function registerNocturneMemoryTools(pi: ExtensionAPI): void {
+export default function (pi: ExtensionAPI): void {
   pi.registerTool({
     name: "nocturne_boot",
     label: "Boot Memory",
