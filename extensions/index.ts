@@ -21,7 +21,9 @@ const MCP_AUTH = config.mcpAuth ?? "REDACTED";
 
 const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"];
 
-async function callMCP(method: string, params: Record<string, unknown>): Promise<any> {
+let sessionId: string | null = null;
+
+async function initializeSession(): Promise<string | null> {
   const resp = await fetch(MCP_URL, {
     method: "POST",
     headers: {
@@ -29,11 +31,48 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
       Accept: "application/json, text/event-stream",
       Authorization: MCP_AUTH,
     },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: "init-" + Date.now(),
+      method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "pi-nocturne-memory", version: "1.0.0" },
+      },
+    }),
+  });
+
+  const sid = resp.headers.get("mcp-session-id");
+  return sid;
+}
+
+async function callMCP(method: string, params: Record<string, unknown>): Promise<any> {
+  if (!sessionId) {
+    sessionId = await initializeSession();
+    if (!sessionId) {
+      return { error: { code: -1, message: "Failed to initialize MCP session" } };
+    }
+  }
+
+  const resp = await fetch(MCP_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      Authorization: MCP_AUTH,
+      "Mcp-Session-Id": sessionId,
+    },
     body: JSON.stringify({ jsonrpc: "2.0", id: method + Date.now(), method, params }),
   });
 
+  // Check for new session ID in response
+  const newSid = resp.headers.get("mcp-session-id");
+  if (newSid) {
+    sessionId = newSid;
+  }
+
   const text = await resp.text();
-  // Handle CRLF line endings from SSE
   const lines = text.split(/\r?\n/);
   let currentData = "";
 
@@ -44,7 +83,6 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
     } else if (trimmed.startsWith("event: ")) {
       // ignore event type
     } else if (trimmed === "" && currentData) {
-      // empty line after data = end of event
       try {
         const parsed = JSON.parse(currentData);
         if (parsed.result || parsed.error) {
@@ -57,7 +95,6 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
     }
   }
 
-  // Handle case where data is last line (no trailing empty line)
   if (currentData) {
     try {
       return JSON.parse(currentData);
@@ -96,6 +133,8 @@ export default function (pi: ExtensionAPI): void {
           const data = await callMCP("tools/call", { name: "read_memory", arguments: { uri } });
           if (data?.result?.content?.[0]?.text) {
             results.push(`=== ${uri} ===\n${data.result.content[0].text}`);
+          } else if (data?.error) {
+            errors.push(`${uri}: ${data.error.message}`);
           }
         } catch (err) {
           errors.push(`${uri}: ${err instanceof Error ? err.message : String(err)}`);
