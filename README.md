@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/slahser/pi-atuin/main/screenshot.png" alt="pi-atuin preview" width="100%" />
+<img src="https://raw.githubusercontent.com/RealAlexandreAI/pi-atuin/main/screenshot.png" alt="pi-atuin preview" width="100%" />
 
 # pi-atuin
 
@@ -21,7 +21,7 @@ pi install npm:pi-atuin
 Or from source:
 
 ```bash
-git clone https://github.com/slahser/pi-atuin.git
+git clone https://github.com/RealAlexandreAI/pi-atuin.git
 cd pi-atuin && pi install .
 ```
 
