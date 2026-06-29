@@ -88,6 +88,11 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
     body: JSON.stringify({ jsonrpc: "2.0", id: method + Date.now(), method, params }),
   });
 
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => "<unreadable>");
+    return { error: { code: resp.status, message: `HTTP ${resp.status}: ${body.slice(0, 200)}` } };
+  }
+
   // Check for new session ID in response
   const newSid = resp.headers.get("mcp-session-id");
   if (newSid) {
@@ -129,6 +134,9 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
 }
 
 function extractText(data: any): string {
+  if (data?.error) {
+    return `Error: ${data.error.message ?? JSON.stringify(data.error)}`;
+  }
   return data?.result?.content?.[0]?.text ?? "";
 }
 
@@ -191,7 +199,8 @@ export default function (pi: ExtensionAPI): void {
 
     async execute(_toolCallId, params) {
       const data = await callMCP("tools/call", { name: "read_memory", arguments: { uri: params.uri } });
-      return { content: [{ type: "text", text: extractText(data) || "No content" }] };
+      const text = extractText(data);
+      return { content: [{ type: "text", text: text || "No content" }] };
     },
 
     renderCall(args, theme) {
