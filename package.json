@@ -1,0 +1,33 @@
+{
+  "name": "pi-atuin",
+  "version": "0.1.0",
+  "description": "Atuin-style fuzzy history search for pi. Press ↑ for interactive history.",
+  "license": "MIT",
+  "author": "slahser",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slahser/pi-atuin.git"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "atuin",
+    "history",
+    "fuzzy-search"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "files": [
+    "*.ts",
+    "test",
+    "screenshot.png",
+    "README.md",
+    "LICENSE"
+  ]
+}
