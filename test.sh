@@ -5,7 +5,7 @@ set -e
 echo "=== Testing pi-nocturne-memory ==="
 
 # Test 1: Config file exists
-if [ -f ~/.pi/pi-nocturne-memory.json ]; then
+if [ -f config.json ]; then
   echo "✓ Config file exists"
 else
   echo "✗ Config file missing"
@@ -13,7 +13,7 @@ else
 fi
 
 # Test 2: MCP URL configured
-if grep -q "mcpUrl" ~/.pi/pi-nocturne-memory.json; then
+if grep -q "mcpUrl" config.json; then
   echo "✓ MCP URL configured"
 else
   echo "✗ MCP URL missing"
@@ -21,7 +21,7 @@ else
 fi
 
 # Test 3: Extension files exist
-cd /Users/slahser/Desktop/pi-nocturne-memory
+cd /Users/slahser/Desktop/usaslahser/pi-nocturne-memory
 if [ -f "extensions/index.ts" ]; then
   echo "✓ Extension file exists"
 else
@@ -30,7 +30,7 @@ else
 fi
 
 # Test 4: MCP server reachable
-MCP_URL=$(grep -o '"mcpUrl": *"[^"]*"' ~/.pi/pi-nocturne-memory.json | cut -d'"' -f4)
+MCP_URL=$(grep -o '"mcpUrl": *"[^"]*"' config.json | cut -d'"' -f4)
 if curl -s --max-time 5 -o /dev/null -w "%{http_code}" "$MCP_URL" | grep -q "200\|405"; then
   echo "✓ MCP server reachable"
 else
