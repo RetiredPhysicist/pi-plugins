@@ -1,12 +1,12 @@
 {
   "name": "pi-atuin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Atuin-style fuzzy history search for pi. Press ↑ for interactive history.",
   "license": "MIT",
-  "author": "slahser",
+  "author": "RealAlexandreAI",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/slahser/pi-atuin.git"
+    "url": "git+https://github.com/RealAlexandreAI/pi-atuin.git"
   },
   "keywords": [
     "pi-package",
