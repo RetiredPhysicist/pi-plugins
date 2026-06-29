@@ -19,8 +19,14 @@ function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
 }
 
 const config = loadConfig();
-const MCP_URL = config.mcpUrl ?? "https://dejavu.example.com/mcp";
-const MCP_AUTH = config.mcpAuth ?? "REDACTED";
+const MCP_URL = config.mcpUrl;
+const MCP_AUTH = config.mcpAuth;
+if (!MCP_URL) {
+  throw new Error("mcpUrl is required in config.json");
+}
+if (!MCP_AUTH) {
+  throw new Error("mcpAuth is required in config.json");
+}
 
 const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"];
 
