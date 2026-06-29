@@ -3,12 +3,9 @@ import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
+import { homedir } from "node:os";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const CONFIG_PATH = join(__dirname, "..", "config.json");
+const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-nocturne-memory", "config.json");
 
 function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
   try {
