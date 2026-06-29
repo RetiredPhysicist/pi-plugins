@@ -1,6 +1,6 @@
 {
   "name": "pi-atuin",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Atuin-style fuzzy history search for pi. Press ↑ for interactive history.",
   "license": "MIT",
   "author": "RealAlexandreAI",

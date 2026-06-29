@@ -9,7 +9,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import { matchesKey, Key } from "@earendil-works/pi-tui";
-import { addEntry, invalidateCache, listRecent, writeToAtuin } from "./history-store.js";
+import { addEntry, invalidateCache, listRecent, writeToAtuin, isRecentWrite, markRecentWrite } from "./history-store.js";
 import { HistorySearchComponent } from "./search-ui.js";
 
 export default function piAtuin(pi: ExtensionAPI) {
@@ -17,6 +17,9 @@ export default function piAtuin(pi: ExtensionAPI) {
 	pi.on("input", async (event, ctx) => {
 		if (event.source === "interactive" && event.text.trim()) {
 			const text = event.text.trim();
+			// Guard against duplicate input events (pi may fire input twice)
+			if (isRecentWrite(text)) return { action: "continue" as const };
+			markRecentWrite(text);
 			await addEntry(text, ctx.cwd);
 			// Also write to atuin DB so shell atuin can search pi prompts
 			writeToAtuin(text, ctx.cwd);

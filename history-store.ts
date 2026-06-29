@@ -25,6 +25,26 @@ export interface HistoryEntry {
 
 let writeQueue: Promise<void> = Promise.resolve();
 
+// ponytail: in-memory dedup guard — input event may fire twice per entry.
+// prevents duplicate writes to JSONL within 5s window.
+const recentWrites = new Map<string, number>();
+const WRITE_DEDUP_MS = 5_000;
+
+export function isRecentWrite(text: string): boolean {
+	const last = recentWrites.get(text);
+	if (last && Date.now() - last < WRITE_DEDUP_MS) return true;
+	return false;
+}
+
+export function markRecentWrite(text: string): void {
+	recentWrites.set(text, Date.now());
+	// Cleanup entries older than WRITE_DEDUP_MS
+	const cutoff = Date.now() - WRITE_DEDUP_MS;
+	for (const [k, ts] of recentWrites) {
+		if (ts < cutoff) recentWrites.delete(k);
+	}
+}
+
 // ---------------------------------------------------------------------------
 // JSONL persistence
 // ---------------------------------------------------------------------------
@@ -143,7 +163,7 @@ async function loadAllEntries(): Promise<HistoryEntry[]> {
 		const key = entry.text.trim();
 		const existing = seen.get(key);
 		if (!existing || Math.abs(entry.timestamp - existing.timestamp) > 5000) {
-			seen.set(`${key}-${entry.timestamp}`, entry);
+			seen.set(key, entry);
 		}
 	}
 
