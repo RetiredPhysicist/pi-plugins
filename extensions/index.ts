@@ -8,21 +8,37 @@ import { homedir } from "node:os";
 const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-nocturne-memory", "config.json");
 
 function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
+  const env = process.env;
+  const result: { mcpUrl?: string; mcpAuth?: string } = {};
+
+  // Config file takes priority
   try {
-    return JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+    const fileConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+    result.mcpUrl = fileConfig.mcpUrl;
+    result.mcpAuth = fileConfig.mcpAuth;
   } catch {
-    return {};
+    // use defaults
   }
+
+  // Env vars as fallback
+  if (!result.mcpUrl && env.NOCTURNE_MCP_URL) {
+    result.mcpUrl = env.NOCTURNE_MCP_URL;
+  }
+  if (!result.mcpAuth && env.NOCTURNE_MCP_AUTH) {
+    result.mcpAuth = env.NOCTURNE_MCP_AUTH;
+  }
+
+  return result;
 }
 
 const config = loadConfig();
 const MCP_URL = config.mcpUrl;
 const MCP_AUTH = config.mcpAuth;
 if (!MCP_URL) {
-  throw new Error("mcpUrl is required in config.json");
+  throw new Error("mcpUrl is required (set in config.json or NOCTURNE_MCP_URL env)");
 }
 if (!MCP_AUTH) {
-  throw new Error("mcpAuth is required in config.json");
+  throw new Error("mcpAuth is required (set in config.json or NOCTURNE_MCP_AUTH env)");
 }
 
 const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"];
