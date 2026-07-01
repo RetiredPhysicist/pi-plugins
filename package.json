@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/usaslahser/pi-all-notification.git"
+    "url": "git+https://github.com/RealAlexandreAI/pi-all-notification.git"
   },
   "pi": {
     "extensions": ["./extensions/index.ts"]
