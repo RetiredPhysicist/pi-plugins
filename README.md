@@ -13,7 +13,7 @@ pi 多渠道通知扩展 — macOS 桌面通知 / Bark 推送 / 自定义 Webhoo
 ## 安装
 
 ```bash
-pi install git:github.com/usaslahser/pi-all-notification
+pi install git:github.com/RealAlexandreAI/pi-all-notification
 ```
 
 重启 pi（或 `/reload`）。
