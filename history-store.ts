@@ -5,14 +5,16 @@
 import { readFile, writeFile, appendFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { fuzzySearch } from "./fuzzy-match.js";
+import { createExecFileAtuinExec, recordAtuinCommand } from "./atuin-cli.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fuzzySearch } from "./fuzzy-match.js";
 
 const execFileAsync = promisify(execFile);
+const atuinExec = createExecFileAtuinExec();
 
 const JSONL_PATH = join(homedir(), ".pi", "agent", "pi-history.jsonl");
-const ATUIN_TIMEOUT_MS = 5_000;
+const ATUIN_READ_TIMEOUT_MS = 5_000;
 const MAX_ENTRIES = 1000;
 
 export interface HistoryEntry {
@@ -111,7 +113,7 @@ async function readAtuinHistory(): Promise<HistoryEntry[]> {
 		const { stdout } = await execFileAsync(
 			"atuin",
 			["search", "--format", "{time}\t{command}", "--limit", "200"],
-			{ timeout: ATUIN_TIMEOUT_MS },
+			{ timeout: ATUIN_READ_TIMEOUT_MS },
 		);
 
 		const lines = stdout.split("\n").filter((l) => l.trim());
@@ -212,24 +214,6 @@ export function invalidateCache(): void {
 // Write back to atuin (so shell atuin search also sees pi prompts)
 // ---------------------------------------------------------------------------
 
-const ATUIN_AUTHOR = "pi";
-
 export async function writeToAtuin(text: string, cwd: string): Promise<void> {
-	try {
-		const { stdout } = await execFileAsync(
-			"atuin",
-			["history", "start", "--author", ATUIN_AUTHOR, "--", text],
-			{ cwd, timeout: ATUIN_TIMEOUT_MS },
-		);
-		const id = stdout.trim();
-		if (id) {
-			await execFileAsync(
-				"atuin",
-				["history", "end", id, "--exit", "0"],
-				{ cwd, timeout: ATUIN_TIMEOUT_MS },
-			);
-		}
-	} catch {
-		// atuin not installed or failed — silently ignore
-	}
+	await recordAtuinCommand(atuinExec, cwd, text, 0);
 }

@@ -35,30 +35,56 @@ curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
 
 # Register / login
 atuin register -u <username> -e <email>
-
-# Install pi hook (tracks bash commands in atuin)
-atuin hook install pi
 ```
 
-With this, pi prompts and bash commands sync bidirectionally to atuin DB. Search in either pi or your shell.
+pi-atuin records history into atuin automatically — no `atuin hook install pi` needed. That hook registers a conflicting `bash` tool and breaks extensions like [pi-tool-display](https://github.com/MasuRii/pi-tool-display).
+
+If you previously ran `atuin hook install pi`, remove the hook extension:
+
+```bash
+rm ~/.pi/agent/extensions/atuin.ts
+pi /reload
+```
+
+With atuin installed, history syncs bidirectionally. Search in either pi (↑) or your shell (`atuin search`).
 
 ### JSONL-only (no atuin)
 
-No setup needed. History stored in `~/.pi/agent/pi-history.jsonl`.
+No setup needed. Pi prompts are stored in `~/.pi/agent/pi-history.jsonl`.
+
+## What gets recorded
+
+| Source | JSONL (↑ search) | Atuin DB |
+|--------|------------------|----------|
+| Your pi prompts | Yes | Yes |
+| Agent `bash` tool calls | No | Yes (default on) |
+| Your `!` shell commands | No | Yes |
+
+- **Prompts** always go to JSONL and atuin (when installed).
+- **Agent bash** is recorded to atuin only (not mixed into ↑ prompt search). On by default; `/atuin record-agent-history` toggles it.
+- **`!` commands** are your direct shell input in pi — tracked in atuin, not JSONL.
 
 ## Usage
+
+### History search
 
 1. Press **↑** when your input is empty (or cursor is on the first line)
 2. Type to fuzzy-filter
 3. **↑↓** to navigate, **Enter** to select, **Esc** to cancel
 
-All pi prompts are recorded automatically. Supports bash, zsh, and fish.
+### Commands
+
+```text
+/atuin record-agent-history   # toggle agent bash → atuin, shows on/off
+```
+
+Settings persist in `~/.pi/agent/extensions/pi-atuin/config.json`.
 
 ## Privacy
 
 - History file permissions: `600` (owner-only)
-- Max 1,000 entries, auto-trimmed
-- Atuin calls use `execFile` (no shell injection)
+- Max 1,000 JSONL entries, auto-trimmed
+- Atuin calls use `execFile` / `pi.exec` (no shell injection)
 - No hardcoded credentials or keys
 
 ## License

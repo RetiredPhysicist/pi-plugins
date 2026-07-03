@@ -11,8 +11,21 @@ import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import { matchesKey, Key } from "@earendil-works/pi-tui";
 import { addEntry, invalidateCache, listRecent, writeToAtuin, isRecentWrite, markRecentWrite } from "./history-store.js";
 import { HistorySearchComponent } from "./search-ui.js";
+import { registerBashTracker } from "./bash-tracker.js";
+import { loadConfig, saveConfig } from "./config.js";
+import { registerAtuinCommands } from "./commands.js";
 
 export default function piAtuin(pi: ExtensionAPI) {
+	let config = loadConfig();
+
+	const getConfig = () => config;
+	const setConfig = (next: typeof config) => {
+		config = next;
+		saveConfig(config);
+	};
+
+	registerBashTracker(pi, getConfig);
+	registerAtuinCommands(pi, getConfig, setConfig);
 	// ---- 1. Record user inputs to history ----
 	pi.on("input", async (event, ctx) => {
 		if (event.source === "interactive" && event.text.trim()) {
