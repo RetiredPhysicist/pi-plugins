@@ -68,7 +68,7 @@ No setup needed. Pi prompts are stored in `~/.pi/agent/pi-history.jsonl`.
 
 ### History search
 
-1. Press **↑** when your input is empty (or cursor is on the first line)
+1. Press **↑** when the input is empty
 2. Type to fuzzy-filter
 3. **↑↓** to navigate, **Enter** to select, **Esc** to cancel
 

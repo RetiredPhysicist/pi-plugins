@@ -48,12 +48,9 @@ export default function piAtuin(pi: ExtensionAPI) {
 			const editor = new CustomEditor(tui, theme, keybindings);
 
 			editor.onExtensionShortcut = (data: string) => {
-				if (matchesKey(data, Key.up)) {
-					const cursor = editor.getCursor();
-					if (cursor.line === 0) {
-						openSearch(ctx, editor);
-						return true;
-					}
+				if (matchesKey(data, Key.up) && editor.getText().length === 0) {
+					openSearch(ctx, editor);
+					return true;
 				}
 				return false;
 			};
