@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { fuzzyMatch, fuzzySearch } from "../fuzzy-match.js";
+import { fuzzyMatch, fuzzySearch } from "../fuzzy-match.ts";
 
 describe("fuzzyMatch", () => {
 	it("exact substring match", () => {

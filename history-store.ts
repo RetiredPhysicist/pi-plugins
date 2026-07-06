@@ -6,6 +6,7 @@ import { readFile, writeFile, appendFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fuzzySearch } from "./fuzzy-match.js";
+import { normalizeHistoryText } from "./history-preview.js";
 import { createExecFileAtuinExec, recordAtuinCommand } from "./atuin-cli.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -187,7 +188,7 @@ export async function searchHistory(
 	const results = fuzzySearch(
 		query,
 		entries,
-		(e) => e.text,
+		(e) => normalizeHistoryText(e.text),
 		limit,
 	);
 

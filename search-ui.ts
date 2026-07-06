@@ -7,6 +7,12 @@
 
 import type { Component, Focusable } from "@earendil-works/pi-tui";
 import { CURSOR_MARKER, matchesKey, Key, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import {
+	buildDetailPreview,
+	needsDetailPreview,
+	normalizeHistoryText,
+	ELLIPSIS as PREVIEW_ELLIPSIS,
+} from "./history-preview.js";
 import { searchHistory, listRecent, type HistoryEntry } from "./history-store.js";
 
 interface SearchResult {
@@ -26,9 +32,8 @@ function fmtTime(ts: number): string {
 	return `${Math.floor(h / 24)}d`;
 }
 
-function clean(t: string): string {
-	return t.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, " ").trim();
-}
+const PREVIEW_MAX_LINES = 2;
+const vw: (s: string) => number = (s) => visibleWidth(s);
 
 export class HistorySearchComponent implements Component, Focusable {
 	private query = "";
@@ -36,6 +41,7 @@ export class HistorySearchComponent implements Component, Focusable {
 	private sel: number;
 	private scroll = 0;
 	private cachedW?: number;
+	private cachedSel?: number;
 	private cachedLines?: string[];
 	private _focused = false;
 	private visCount = 15;
@@ -121,12 +127,24 @@ export class HistorySearchComponent implements Component, Focusable {
 	}
 
 	render(width: number, height?: number): string[] {
-		this.visCount = Math.max(3, (height ?? 20) - 5);
-
-		if (this.cachedW === width && this.cachedLines) return this.cachedLines;
-
 		const W = width;
-		const iw = W - 2; // inner width between border chars
+		const iw = W - 2;
+
+		const cmdAvail = iw - 3 - this.TS_COL - 3;
+		const previewWidth = iw - 2;
+		const selected = this.results[this.sel];
+		const detailPreview =
+			selected && needsDetailPreview(selected.item.text, cmdAvail, vw)
+				? buildDetailPreview(selected.item.text, previewWidth, PREVIEW_MAX_LINES, vw)
+				: [];
+		const previewOverhead = detailPreview.length > 0 ? detailPreview.length + 1 : 0;
+
+		this.visCount = Math.max(3, (height ?? 20) - 5 - previewOverhead);
+
+		if (this.cachedW === width && this.cachedSel === this.sel && this.cachedLines) {
+			return this.cachedLines;
+		}
+
 		const lines: string[] = [];
 
 		const wrap = (inner: string) => {
@@ -192,13 +210,15 @@ export class HistorySearchComponent implements Component, Focusable {
 				const tsCol = this.theme.fg("dim", tsPadded);
 				const sep = this.theme.fg("border", " \u2502 ");
 
-				const cmd = clean(r.item.text);
-				const cmdAvail = iw - 3 - this.TS_COL - 3; // pfx + ts + " | "
+				const cmd = normalizeHistoryText(r.item.text);
 				let cmdStr: string;
-				if (r.indices.length > 0 && this.query) {
+				if (this.query && r.indices.length > 0) {
 					cmdStr = this.hlText(cmd, r.indices, isSel, cmdAvail);
 				} else {
-					cmdStr = this.theme.fg(isSel ? "accent" : "text", truncateToWidth(cmd, cmdAvail));
+					cmdStr = this.theme.fg(
+						isSel ? "accent" : "text",
+						truncateToWidth(cmd, cmdAvail, PREVIEW_ELLIPSIS),
+					);
 				}
 
 				lines.push(wrap(pfx + tsCol + sep + cmdStr));
@@ -211,6 +231,13 @@ export class HistorySearchComponent implements Component, Focusable {
 		}
 
 		// ── Separator ──
+		if (detailPreview.length > 0) {
+			lines.push(this.line(this.B("\u251C") + this.D("\u2500".repeat(iw)) + this.B("\u2524"), W));
+			for (const pl of detailPreview) {
+				lines.push(wrap(this.D(pl)));
+			}
+		}
+
 		lines.push(this.line(this.B("\u251C") + this.D("\u2500".repeat(iw)) + this.B("\u2524"), W));
 
 		// ── Footer ──
@@ -223,27 +250,35 @@ export class HistorySearchComponent implements Component, Focusable {
 		lines.push(this.line(this.B("\u2514") + this.D("\u2500".repeat(iw)) + this.B("\u2518"), W));
 
 		this.cachedW = W;
+		this.cachedSel = this.sel;
 		this.cachedLines = lines;
 		return lines;
 	}
 
 	private hlText(text: string, indices: number[], sel: boolean, maxW: number): string {
 		const set = new Set(indices);
-		let out = "";
+		let plain = "";
+		let styled = "";
 		for (let i = 0; i < text.length; i++) {
-			if (visibleWidth(out) >= maxW) break;
-			const ch = text[i] === "\t" ? " " : text[i];
+			const ch = text[i];
+			const nextLen = visibleWidth(plain + ch);
+			if (nextLen > maxW) break;
+			plain += ch;
 			if (set.has(i)) {
-				out += this.theme.fg("accent", this.theme.bold(ch));
+				styled += this.theme.fg("accent", this.theme.bold(ch));
 			} else {
-				out += this.theme.fg(sel ? "accent" : "muted", ch);
+				styled += this.theme.fg(sel ? "accent" : "muted", ch);
 			}
 		}
-		return out;
+		if (plain.length < text.length) {
+			return truncateToWidth(styled, maxW, PREVIEW_ELLIPSIS);
+		}
+		return styled;
 	}
 
 	invalidate(): void {
 		this.cachedW = undefined;
+		this.cachedSel = undefined;
 		this.cachedLines = undefined;
 	}
 
