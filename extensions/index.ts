@@ -99,7 +99,11 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
     sessionId = newSid;
   }
 
-  const text = await resp.text();
+  return parseStreamResponse(await resp.text());
+}
+
+/** Parse an SSE body into the first JSON-RPC result/error object. Pure logic. */
+export function parseStreamResponse(text: string): any {
   const lines = text.split(/\r?\n/);
   let currentData = "";
 
@@ -133,7 +137,7 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
   return null;
 }
 
-function extractText(data: any): string {
+export function extractText(data: any): string {
   if (data?.error) {
     return `Error: ${data.error.message ?? JSON.stringify(data.error)}`;
   }
