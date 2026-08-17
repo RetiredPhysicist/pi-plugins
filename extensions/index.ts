@@ -44,6 +44,15 @@ if (!MCP_AUTH) {
 const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"];
 
 let sessionId: string | null = null;
+// MCP 2.0 (2026-07-28) is stateless: no handshake, no session. Probe once —
+// 2.0 servers answer without a session, legacy (2025-era) servers demand one.
+let mode: "unknown" | "stateless" | "legacy" = "unknown";
+
+function isMissingSession(parsed: any): boolean {
+  const code = parsed?.error?.code;
+  const message = String(parsed?.error?.message ?? "").toLowerCase();
+  return code === -32600 || message.includes("session");
+}
 
 async function initializeSession(): Promise<string | null> {
   const resp = await fetch(MCP_URL, {
@@ -70,6 +79,30 @@ async function initializeSession(): Promise<string | null> {
 }
 
 async function callMCP(method: string, params: Record<string, unknown>): Promise<any> {
+  // MCP 2.0 stateless path: try without a session first (no initialize).
+  if (mode !== "legacy") {
+    const resp = await fetch(MCP_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        Authorization: MCP_AUTH,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: method + Date.now(), method, params }),
+    });
+    if (resp.ok) {
+      const parsed = parseStreamResponse(await resp.text());
+      if (!isMissingSession(parsed)) {
+        mode = "stateless";
+        const newSid = resp.headers.get("mcp-session-id");
+        if (newSid) sessionId = newSid;
+        return parsed;
+      }
+      // Legacy server demands a session — fall through to handshake.
+    }
+  }
+
+  mode = "legacy";
   if (!sessionId) {
     sessionId = await initializeSession();
     if (!sessionId) {
