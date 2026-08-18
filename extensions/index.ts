@@ -34,12 +34,8 @@ function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
 const config = loadConfig();
 const MCP_URL = config.mcpUrl;
 const MCP_AUTH = config.mcpAuth;
-if (!MCP_URL) {
-  throw new Error("mcpUrl is required (set in config.json or NOCTURNE_MCP_URL env)");
-}
-if (!MCP_AUTH) {
-  throw new Error("mcpAuth is required (set in config.json or NOCTURNE_MCP_AUTH env)");
-}
+// Zero-config boot: the extension always loads. Missing server config
+// surfaces as a friendly hint on tool calls (see callMCP), not at startup.
 
 const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"];
 
@@ -79,6 +75,13 @@ async function initializeSession(): Promise<string | null> {
 }
 
 async function callMCP(method: string, params: Record<string, unknown>): Promise<any> {
+  if (!MCP_URL) {
+    throw new Error(
+      "Nocturne MCP server not configured. Create ~/.pi/agent/extensions/pi-nocturne-memory/config.json with " +
+      '{ "mcpUrl": "http://localhost:PORT/mcp", "mcpAuth": "Bearer ..." } — ' +
+      "the extension loads fine without it; memory tools activate once configured.",
+    );
+  }
   // MCP 2.0 stateless path: try without a session first (no initialize).
   if (mode !== "legacy") {
     const resp = await fetch(MCP_URL, {
