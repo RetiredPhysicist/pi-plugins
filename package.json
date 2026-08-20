@@ -4,7 +4,7 @@
   "description": "Nocturne Memory extension for Pi — automated memory management with SessionStart boot protocol",
   "license": "MIT",
   "type": "module",
-  "repository": "github:RealAlexandreAI/pi-nocturne-memory",
+  "repository": "github:RealAlexandreAI/pi-noc-memory",
   "keywords": [
     "pi-package",
     "pi",
