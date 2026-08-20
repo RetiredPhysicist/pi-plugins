@@ -1,6 +1,6 @@
 {
   "name": "pi-noc-memory",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Nocturne Memory extension for Pi — automated memory management with SessionStart boot protocol",
   "license": "MIT",
   "type": "module",

@@ -1,5 +1,9 @@
 # pi-noc-memory
 
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="pi-noc-memory — SessionStart boot protocol + memory tools for Pi">
+</p>
+
 **Noc Memory extension for Pi — automated memory management with SessionStart boot protocol.**
 
 Agent-side companion to [cf-noc-mem](https://github.com/RealAlexandreAI/cf-noc-mem) (the Cloudflare-hosted MCP memory server). Also available for dsh: [dsh-noc-memory](https://github.com/RealAlexandreAI/dsh-noc-memory).
