@@ -1,7 +1,7 @@
 # Noc Memory Rules
 
 ## Self-Discipline Startup Protocol
-At the start of every new session, the agent MUST call `noc_boot` before doing anything else. This loads core memories, recent context, glossary, and today's working-memory briefing.
+At the start of every new session, the agent MUST call `noc_boot` before doing anything else. This loads core memories, recent context, glossary, and today's working-memory briefing. Then read `system://focus` to see which working trees were touched recently and resume the active one (`system://recent` is a subset of the briefing — no need to read it separately).
 
 ## Mechanism: pull, not push
 Memory is never pushed into context. Only the boot layer is always present; everything else arrives only when you actively `read` or `search`.
