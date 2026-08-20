@@ -49,3 +49,22 @@ Never keep two conflicting versions. When a read surfaces a conflict with an exi
 
 ## Memory Value Principle
 Memory value = ability to change behavior. If remembering something doesn't change your action, it's dead data worth deleting.
+
+## Memory Audit (periodic self-maintenance)
+Run when: after ~30-50 new memories, when you keep repeating the same mistake, or when `noc_boot`/`noc_briefing` surfaces stale-looking entries. Start with `noc_read("system://diagnostic/noc")` — it reports the known problem classes.
+
+### Diagnostic signals → action
+
+| Signal | Meaning | Action |
+|--------|---------|--------|
+| High-priority, never re-accessed | disclosure/parent placement wrong, or priority inflated | Fix disclosure to fire on observable input; move under a parent you actually read; demote priority |
+| Stale / cold candidates | memory hasn't been read in a long time | First ask WHY it wasn't read. Dead data → delete. Wrong placement → fix. Still valuable but niche → demote, don't delete |
+| Crowded parent (>10 children) | too many nodes under one parent | Extract shared pattern into a parent memory; or regroup children under sub-parents |
+| Bloat (>800 tokens, not a spec) | multiple concepts crammed into one node | Split into separate nodes; each node = one retrievable unit |
+| Conflicting memories | two nodes contradict | Merge/supersede via `noc_update` — never keep both |
+
+### Rules of the audit
+- Always `noc_read` the full node before modifying — never judge by URI/title alone.
+- When updating, your new version **replaces** the old (identity is the URI, not the Memory ID).
+- If the same topic got rewritten multiple times in one session, stop editing — you don't have a stable position yet. Leave it, let it settle.
+- The goal is a memory library that changes your behavior, not a clean archive. Deleting a memory that still affects your decisions is a loss, not tidy upkeep.
