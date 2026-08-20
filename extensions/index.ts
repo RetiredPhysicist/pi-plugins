@@ -5,19 +5,27 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-nocturne-memory", "config.json");
+const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-noc-memory", "config.json");
+// Legacy path from the old package name — still read so existing installs don't lose config.
+const LEGACY_CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-nocturne-memory", "config.json");
 
 function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
   const env = process.env;
   const result: { mcpUrl?: string; mcpAuth?: string } = {};
 
-  // Config file takes priority
+  // Config file takes priority (new path first, then legacy)
   try {
     const fileConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
     result.mcpUrl = fileConfig.mcpUrl;
     result.mcpAuth = fileConfig.mcpAuth;
   } catch {
-    // use defaults
+    try {
+      const fileConfig = JSON.parse(readFileSync(LEGACY_CONFIG_PATH, "utf8"));
+      result.mcpUrl = fileConfig.mcpUrl;
+      result.mcpAuth = fileConfig.mcpAuth;
+    } catch {
+      // use defaults
+    }
   }
 
   // Env vars as fallback
@@ -65,7 +73,7 @@ async function initializeSession(): Promise<string | null> {
       params: {
         protocolVersion: "2024-11-05",
         capabilities: {},
-        clientInfo: { name: "pi-nocturne-memory", version: "1.0.0" },
+        clientInfo: { name: "pi-noc-memory", version: "1.0.0" },
       },
     }),
   });
@@ -77,7 +85,7 @@ async function initializeSession(): Promise<string | null> {
 async function callMCP(method: string, params: Record<string, unknown>): Promise<any> {
   if (!MCP_URL) {
     throw new Error(
-      "Nocturne MCP server not configured. Create ~/.pi/agent/extensions/pi-nocturne-memory/config.json with " +
+      "Noc MCP server not configured. Create ~/.pi/agent/extensions/pi-noc-memory/config.json with " +
       '{ "mcpUrl": "http://localhost:PORT/mcp", "mcpAuth": "Bearer ..." } — ' +
       "the extension loads fine without it; memory tools activate once configured.",
     );
@@ -182,13 +190,13 @@ export function extractText(data: any): string {
 
 export default function (pi: ExtensionAPI): void {
   pi.registerTool({
-    name: "nocturne_boot",
+    name: "noc_boot",
     label: "Boot Memory",
     description:
-      "Call at session start. Loads core memories, recent context, and glossary. Self-discipline startup protocol.",
+      "Call at session start. Loads core memories, recent context, glossary, and today's working-memory briefing. Self-discipline startup protocol.",
     promptGuidelines: [
       "MUST call at session start before any other work.",
-      "Loads core identity, recent context, and trigger glossary.",
+      "Loads core identity, recent context, trigger glossary, and daily briefing.",
     ],
     parameters: Type.Object({}),
 
@@ -215,6 +223,17 @@ export default function (pi: ExtensionAPI): void {
         return { content: [{ type: "text", text: `❌ ${errors.join("\n")}` }], details: { error: errors.join("\n") } };
       }
 
+      // Daily working-memory briefing: recent activity, expiring, cold candidates.
+      // Best-effort — if the server doesn't implement it, boot still succeeds.
+      try {
+        const data = await callMCP("tools/call", { name: "read_memory", arguments: { uri: "system://briefing" } });
+        if (data?.result?.content?.[0]?.text) {
+          results.push(`=== system://briefing ===\n${data.result.content[0].text}`);
+        }
+      } catch {
+        // ignore — briefing is optional
+      }
+
       return { content: [{ type: "text", text: results.join("\n\n---\n\n") }], details: { booted: results.length } };
     },
 
@@ -230,7 +249,7 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "nocturne_read",
+    name: "noc_read",
     label: "Read Memory",
     description: "Read a memory by URI. Use system:// URIs or memory paths like core://agent.",
     parameters: Type.Object({
@@ -254,7 +273,7 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "nocturne_search",
+    name: "noc_search",
     label: "Search Memory",
     description: "Search memories by keywords in path and content.",
     parameters: Type.Object({
@@ -281,7 +300,7 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "nocturne_create",
+    name: "noc_create",
     label: "Create Memory",
     description: "Create a new memory node. Include [Baseline], [Deviation], [Result], [Reusable judgment] for behavior records.",
     parameters: Type.Object({
@@ -317,7 +336,7 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "nocturne_update",
+    name: "noc_update",
     label: "Update Memory",
     description: "Update existing memory. Use patch mode (old_string/new_string) or append mode.",
     parameters: Type.Object({

@@ -1,7 +1,7 @@
 {
-  "name": "pi-nocturne-memory",
-  "version": "1.0.17",
-  "description": "Nocturne Memory extension for Pi \u2014 automated memory management with SessionStart boot protocol",
+  "name": "pi-noc-memory",
+  "version": "1.1.0",
+  "description": "Nocturne Memory extension for Pi — automated memory management with SessionStart boot protocol",
   "license": "MIT",
   "type": "module",
   "repository": "github:RealAlexandreAI/pi-nocturne-memory",
