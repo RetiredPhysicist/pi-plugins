@@ -15,7 +15,7 @@ Memory is never pushed into context. Only the boot layer is always present; ever
 
 ### Reading
 - IF user mentions a topic you should have memory about → `noc_read` first
-- IF unsure about a memory URI → use `noc_search` (literal match — use words close to the original text), never guess a URI
+- IF unsure about a memory URI → use `noc_search`; **describe what you need in natural language (concept/意图), not just the exact words** — semantic recall finds memories with no shared keywords (e.g. "部署失败" finds a note about a broken release pipeline); keywords still work, but don't limit yourself to them
 - IF conversation exceeds 15 turns → `noc_read` to recalibrate
 - IF a disclosure condition in view is triggered → must read immediately
 
@@ -68,3 +68,10 @@ Run when: after ~30-50 new memories, when you keep repeating the same mistake, o
 - When updating, your new version **replaces** the old (identity is the URI, not the Memory ID).
 - If the same topic got rewritten multiple times in one session, stop editing — you don't have a stable position yet. Leave it, let it settle.
 - The goal is a memory library that changes your behavior, not a clean archive. Deleting a memory that still affects your decisions is a loss, not tidy upkeep.
+
+## Tool set awareness
+Your daily loop is 5 tools: `noc_read` / `noc_search` / `noc_create` / `noc_update` / `noc_delete`.
+- `list_memories`, `add_alias`, `manage_triggers`, `rename_memory`: occasional housekeeping.
+- `rollback_memory` + `list_audit`: recovery after a bad edit — not for routine use.
+- `reindex_vectors`: **operator maintenance, never call it** — it backfills semantic vectors after server upgrades; you have nothing to reindex.
+- `noc_boot` is handled by the session hook; call it manually only when the hook did not run.

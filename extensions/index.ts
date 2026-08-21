@@ -275,9 +275,10 @@ export default function (pi: ExtensionAPI): void {
   pi.registerTool({
     name: "noc_search",
     label: "Search Memory",
-    description: "Search memories by keywords in path and content.",
+    description:
+      "Search memories with semantic + keyword recall (multilingual, CJK-capable). Describe what you are looking for in natural language — semantic search finds memories that share no keywords (e.g. query \"部署失败\" recalls a note about a broken release pipeline).",
     parameters: Type.Object({
-      query: Type.String({ description: "Search keywords" }),
+      query: Type.String({ description: "Concept or keywords to search for" }),
       domain: Type.Optional(Type.String({ description: "Domain filter (e.g., core, writer)" })),
     }),
 
