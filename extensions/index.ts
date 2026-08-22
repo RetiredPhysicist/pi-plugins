@@ -9,20 +9,22 @@ const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-noc-memory
 // Legacy path from the old package name — still read so existing installs don't lose config.
 const LEGACY_CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-nocturne-memory", "config.json");
 
-function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
+function loadConfig(): { mcpUrl?: string; mcpAuth?: string; mcpHeaders?: Record<string, string> } {
   const env = process.env;
-  const result: { mcpUrl?: string; mcpAuth?: string } = {};
+  const result: { mcpUrl?: string; mcpAuth?: string; mcpHeaders?: Record<string, string> } = {};
 
   // Config file takes priority (new path first, then legacy)
   try {
     const fileConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
     result.mcpUrl = fileConfig.mcpUrl;
     result.mcpAuth = fileConfig.mcpAuth;
+    result.mcpHeaders = fileConfig.mcpHeaders;
   } catch {
     try {
       const fileConfig = JSON.parse(readFileSync(LEGACY_CONFIG_PATH, "utf8"));
       result.mcpUrl = fileConfig.mcpUrl;
       result.mcpAuth = fileConfig.mcpAuth;
+      result.mcpHeaders = fileConfig.mcpHeaders;
     } catch {
       // use defaults
     }
@@ -42,6 +44,9 @@ function loadConfig(): { mcpUrl?: string; mcpAuth?: string } {
 const config = loadConfig();
 const MCP_URL = config.mcpUrl;
 const MCP_AUTH = config.mcpAuth;
+// Extra headers merged into every MCP request — e.g. Cloudflare Access
+// service token ("CF-Access-Client-Id" / "CF-Access-Client-Secret").
+const MCP_HEADERS: Record<string, string> = config.mcpHeaders ?? {};
 // Zero-config boot: the extension always loads. Missing server config
 // surfaces as a friendly hint on tool calls (see callMCP), not at startup.
 
@@ -65,6 +70,7 @@ async function initializeSession(): Promise<string | null> {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
       Authorization: MCP_AUTH,
+      ...MCP_HEADERS,
     },
     body: JSON.stringify({
       jsonrpc: "2.0",
@@ -98,6 +104,7 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
         "Content-Type": "application/json",
         Accept: "application/json, text/event-stream",
         Authorization: MCP_AUTH,
+        ...MCP_HEADERS,
       },
       body: JSON.stringify({ jsonrpc: "2.0", id: method + Date.now(), method, params }),
     });
@@ -127,6 +134,7 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
       Authorization: MCP_AUTH,
+      ...MCP_HEADERS,
       "Mcp-Session-Id": sessionId,
     },
     body: JSON.stringify({ jsonrpc: "2.0", id: method + Date.now(), method, params }),

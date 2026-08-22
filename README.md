@@ -36,6 +36,20 @@ Set your MCP endpoint (new path, or legacy `pi-nocturne-memory` path):
 { "mcpUrl": "https://mem.example.com/mcp", "mcpAuth": "Bearer your-token" }
 ```
 
+For servers behind Cloudflare Access (e.g. dejavu.example.com), pass the **service token** headers instead of `mcpAuth`:
+
+```json
+{
+  "mcpUrl": "https://dejavu.example.com/mcp",
+  "mcpHeaders": {
+    "CF-Access-Client-Id": "your-client-id",
+    "CF-Access-Client-Secret": "your-client-secret"
+  }
+}
+```
+
+`mcpHeaders` is merged into every MCP request; `mcpAuth` (Authorization) can be combined if the server also accepts it.
+
 ## How It Works
 
 1. **SessionStart Hook** — triggers boot + briefing at session start
