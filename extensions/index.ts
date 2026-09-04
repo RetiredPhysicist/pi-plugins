@@ -50,8 +50,8 @@ const MCP_HEADERS: Record<string, string> = config.mcpHeaders ?? {};
 // Zero-config boot: the extension always loads. Missing server config
 // surfaces as a friendly hint on tool calls (see callMCP), not at startup.
 
-/** Boot resources read via read_memory — glossary resource is system://glossary. */
-export const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"] as const;
+/** Boot resources read via read_memory (boot + recent; triggers live on nodes, not boot). */
+export const BOOT_URIS = ["system://boot", "system://recent/5"] as const;
 
 /** MCP tool names as exposed by cf-noc-mem (must stay in sync with the server). */
 export const MCP_TOOLS = {
@@ -211,10 +211,10 @@ export default function (pi: ExtensionAPI): void {
     name: "noc_boot",
     label: "Boot Memory",
     description:
-      "Call at session start. Loads core memories, recent context, glossary (system://glossary), and today's working-memory briefing. Self-discipline startup protocol.",
+      "Call at session start. Loads core memories, recent context, and today's working-memory briefing. Self-discipline startup protocol.",
     promptGuidelines: [
       "MUST call at session start before any other work.",
-      "Loads core identity, recent context, system://glossary, and daily briefing.",
+      "Loads core identity, recent context, and daily briefing.",
     ],
     parameters: Type.Object({}),
 
