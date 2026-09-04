@@ -10,7 +10,7 @@ Agent-side companion to [cf-noc-mem](https://github.com/RealAlexandreAI/cf-noc-m
 
 ## Features
 
-- **SessionStart Boot Protocol** — automatically calls `noc_boot` (reads `system://boot`) at session start, then `system://briefing` for today's context (recent activity, expiring memories, cold candidates)
+- **SessionStart Boot Protocol** — automatically calls `noc_boot` (reads `system://boot`, `system://recent/5`, `system://triggers`) at session start, then `system://briefing` for today's context (recent activity, expiring memories, cold candidates)
 - **Memory Rules** — global rules injected every session for intelligent memory usage (write-judgement, update-over-create, trigger discipline)
 - **Memory Tools** — `noc_read`, `noc_create`, `noc_update`, `noc_delete`, `noc_search`, `noc_alias`, `noc_triggers`
 
@@ -53,7 +53,7 @@ For servers behind Cloudflare Access (e.g. dejavu.example.com), pass the **servi
 ## How It Works
 
 1. **SessionStart Hook** — triggers boot + briefing at session start
-2. **Agent calls `noc_boot`** — loads `system://boot`, `system://recent/5`
+2. **Agent calls `noc_boot`** — loads `system://boot`, `system://recent/5`, `system://triggers`
 3. **Agent calls `noc_briefing`** — today's working-memory briefing (if implemented by server)
 4. **Global Rules** — memory operation rules injected every session
 5. **Agent uses memory tools** — read/create/update/delete based on rules

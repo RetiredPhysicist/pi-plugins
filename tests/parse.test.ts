@@ -91,8 +91,9 @@ describe("extractText", () => {
 });
 
 describe("BOOT_URIS", () => {
-  test("boots system://boot and system://recent/5 only — no system://glossary", () => {
-    assert.deepEqual([...BOOT_URIS], ["system://boot", "system://recent/5"]);
+  test("boots system://boot, system://recent/5, and system://triggers — no system://glossary", () => {
+    assert.deepEqual([...BOOT_URIS], ["system://boot", "system://recent/5", "system://triggers"]);
+    assert.ok(BOOT_URIS.includes("system://triggers"));
     assert.ok(!BOOT_URIS.includes("system://glossary"));
   });
 });
