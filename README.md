@@ -53,7 +53,7 @@ For servers behind Cloudflare Access (e.g. dejavu.example.com), pass the **servi
 ## How It Works
 
 1. **SessionStart Hook** — triggers boot + briefing at session start
-2. **Agent calls `noc_boot`** — loads `system://boot`, `system://recent/5`, `system://glossary`
+2. **Agent calls `noc_boot`** — loads `system://boot`, `system://recent/5`
 3. **Agent calls `noc_briefing`** — today's working-memory briefing (if implemented by server)
 4. **Global Rules** — memory operation rules injected every session
 5. **Agent uses memory tools** — read/create/update/delete based on rules
