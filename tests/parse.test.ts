@@ -4,6 +4,9 @@ import assert from "node:assert/strict";
 let parseStreamResponse: (text: string) => any;
 let extractText: (data: any) => string;
 
+let BOOT_URIS: readonly string[];
+let MCP_TOOLS: { read: string; search: string; create: string; update: string; delete: string };
+
 before(async () => {
   // extensions/index.ts requires MCP_URL/MCP_AUTH at module load; satisfy via env
   process.env.NOCTURNE_MCP_URL = "http://127.0.0.1:1";
@@ -11,6 +14,8 @@ before(async () => {
   const mod = await import("../extensions/index.js");
   parseStreamResponse = mod.parseStreamResponse;
   extractText = mod.extractText;
+  BOOT_URIS = mod.BOOT_URIS;
+  MCP_TOOLS = mod.MCP_TOOLS;
 });
 
 describe("parseStreamResponse", () => {
@@ -82,5 +87,25 @@ describe("extractText", () => {
     assert.equal(extractText({ result: {} }), "");
     assert.equal(extractText(null), "");
     assert.equal(extractText(undefined), "");
+  });
+});
+
+describe("BOOT_URIS", () => {
+  test("boots system://boot, system://recent/5, and system://glossary", () => {
+    assert.deepEqual([...BOOT_URIS], ["system://boot", "system://recent/5", "system://glossary"]);
+  });
+});
+
+describe("MCP_TOOLS", () => {
+  test("search tool is search_memory (not search_memories)", () => {
+    assert.equal(MCP_TOOLS.search, "search_memory");
+    assert.notEqual(MCP_TOOLS.search, "search_memories");
+  });
+
+  test("read/create/update/delete match cf-noc-mem names", () => {
+    assert.equal(MCP_TOOLS.read, "read_memory");
+    assert.equal(MCP_TOOLS.create, "create_memory");
+    assert.equal(MCP_TOOLS.update, "update_memory");
+    assert.equal(MCP_TOOLS.delete, "delete_memory");
   });
 });

@@ -50,7 +50,17 @@ const MCP_HEADERS: Record<string, string> = config.mcpHeaders ?? {};
 // Zero-config boot: the extension always loads. Missing server config
 // surfaces as a friendly hint on tool calls (see callMCP), not at startup.
 
-const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"];
+/** Boot resources read via read_memory — glossary resource is system://glossary. */
+export const BOOT_URIS = ["system://boot", "system://recent/5", "system://glossary"] as const;
+
+/** MCP tool names as exposed by cf-noc-mem (must stay in sync with the server). */
+export const MCP_TOOLS = {
+  read: "read_memory",
+  search: "search_memory", // not search_memories
+  create: "create_memory",
+  update: "update_memory",
+  delete: "delete_memory",
+} as const;
 
 let sessionId: string | null = null;
 // MCP 2.0 (2026-07-28) is stateless: no handshake, no session. Probe once —
@@ -201,10 +211,10 @@ export default function (pi: ExtensionAPI): void {
     name: "noc_boot",
     label: "Boot Memory",
     description:
-      "Call at session start. Loads core memories, recent context, glossary, and today's working-memory briefing. Self-discipline startup protocol.",
+      "Call at session start. Loads core memories, recent context, glossary (system://glossary), and today's working-memory briefing. Self-discipline startup protocol.",
     promptGuidelines: [
       "MUST call at session start before any other work.",
-      "Loads core identity, recent context, trigger glossary, and daily briefing.",
+      "Loads core identity, recent context, system://glossary, and daily briefing.",
     ],
     parameters: Type.Object({}),
 
@@ -216,7 +226,7 @@ export default function (pi: ExtensionAPI): void {
 
       for (const uri of BOOT_URIS) {
         try {
-          const data = await callMCP("tools/call", { name: "read_memory", arguments: { uri } });
+          const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri } });
           if (data?.result?.content?.[0]?.text) {
             results.push(`=== ${uri} ===\n${data.result.content[0].text}`);
           } else if (data?.error) {
@@ -234,7 +244,7 @@ export default function (pi: ExtensionAPI): void {
       // Daily working-memory briefing: recent activity, expiring, cold candidates.
       // Best-effort — if the server doesn't implement it, boot still succeeds.
       try {
-        const data = await callMCP("tools/call", { name: "read_memory", arguments: { uri: "system://briefing" } });
+        const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri: "system://briefing" } });
         if (data?.result?.content?.[0]?.text) {
           results.push(`=== system://briefing ===\n${data.result.content[0].text}`);
         }
@@ -265,7 +275,7 @@ export default function (pi: ExtensionAPI): void {
     }),
 
     async execute(_toolCallId, params) {
-      const data = await callMCP("tools/call", { name: "read_memory", arguments: { uri: params.uri } });
+      const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri: params.uri } });
       const text = extractText(data);
       return { content: [{ type: "text", text: text || "No content" }] };
     },
@@ -287,13 +297,15 @@ export default function (pi: ExtensionAPI): void {
       "Search memories with semantic + keyword recall (multilingual, CJK-capable). Describe what you are looking for in natural language — semantic search finds memories that share no keywords (e.g. query \"部署失败\" recalls a note about a broken release pipeline).",
     parameters: Type.Object({
       query: Type.String({ description: "Concept or keywords to search for" }),
-      domain: Type.Optional(Type.String({ description: "Domain filter (e.g., core, writer)" })),
+      limit: Type.Optional(Type.Number({ description: "Max results (1-50, default 20)" })),
+      domain: Type.Optional(Type.String({ description: "Domain filter (e.g., core, writer); ignored by current cf-noc-mem" })),
     }),
 
     async execute(_toolCallId, params) {
       const args: Record<string, unknown> = { query: params.query };
+      if (params.limit !== undefined) args.limit = params.limit;
       if (params.domain) args.domain = params.domain;
-      const data = await callMCP("tools/call", { name: "search_memory", arguments: args });
+      const data = await callMCP("tools/call", { name: MCP_TOOLS.search, arguments: args });
       return { content: [{ type: "text", text: extractText(data) || "No results" }] };
     },
 
@@ -322,7 +334,7 @@ export default function (pi: ExtensionAPI): void {
 
     async execute(_toolCallId, params) {
       const data = await callMCP("tools/call", {
-        name: "create_memory",
+        name: MCP_TOOLS.create,
         arguments: {
           parent_uri: params.parent_uri,
           content: params.content,
@@ -347,30 +359,68 @@ export default function (pi: ExtensionAPI): void {
   pi.registerTool({
     name: "noc_update",
     label: "Update Memory",
-    description: "Update existing memory. Use patch mode (old_string/new_string) or append mode.",
+    description:
+      "Update existing memory. Supports full content replace, old_string/new_string patch, or append. " +
+      "Must noc_read the URI first. Optional relation marks knowledge evolution: replace|enrich|confirm|challenge.",
     parameters: Type.Object({
       uri: Type.String({ description: "Memory URI to update" }),
-      old_string: Type.Optional(Type.String({ description: "Text to replace (patch mode)" })),
-      new_string: Type.Optional(Type.String({ description: "Replacement text (patch mode)" })),
-      append: Type.Optional(Type.String({ description: "Text to append (append mode)" })),
-      priority: Type.Optional(Type.Number({ description: "New priority" })),
+      content: Type.Optional(Type.String({ description: "Full replacement content" })),
+      old_string: Type.Optional(Type.String({ description: "Exact text to replace (patch)" })),
+      new_string: Type.Optional(Type.String({ description: "Replacement text (patch)" })),
+      append: Type.Optional(Type.String({ description: "Text to append" })),
+      priority: Type.Optional(Type.Number({ description: "New priority (lower = more important)" })),
       disclosure: Type.Optional(Type.String({ description: "New disclosure condition" })),
+      expires_at: Type.Optional(Type.String({ description: 'ISO datetime to expire, or "" to clear' })),
+      relation: Type.Optional(
+        Type.String({ description: "Knowledge-evolution relation: replace|enrich|confirm|challenge" }),
+      ),
     }),
 
     async execute(_toolCallId, params) {
       const args: Record<string, unknown> = { uri: params.uri };
+      if (params.content !== undefined) args.content = params.content;
       if (params.old_string) args.old_string = params.old_string;
-      if (params.new_string) args.new_string = params.new_string;
+      if (params.new_string !== undefined) args.new_string = params.new_string;
       if (params.append) args.append = params.append;
       if (params.priority !== undefined) args.priority = params.priority;
       if (params.disclosure) args.disclosure = params.disclosure;
+      if (params.expires_at !== undefined) args.expires_at = params.expires_at;
+      if (params.relation) args.relation = params.relation;
 
-      const data = await callMCP("tools/call", { name: "update_memory", arguments: args });
+      const data = await callMCP("tools/call", { name: MCP_TOOLS.update, arguments: args });
       return { content: [{ type: "text", text: extractText(data) || "Updated" }] };
     },
 
     renderCall(args, theme) {
       return new Text(theme.fg("toolTitle", theme.bold("✏️ Update")), 0, 0);
+    },
+
+    renderResult(result, _options, theme) {
+      const text = (result.content?.[0] as any)?.text ?? "";
+      return new Text(theme.fg("success", text.slice(0, 100)), 0, 0);
+    },
+  });
+
+  pi.registerTool({
+    name: "noc_delete",
+    label: "Delete Memory",
+    description:
+      "Delete a memory by URI (cuts its path). Always noc_read the full node first. " +
+      "If the node has children, the server may return orphans to handle first.",
+    parameters: Type.Object({
+      uri: Type.String({ description: "Memory URI to delete" }),
+    }),
+
+    async execute(_toolCallId, params) {
+      const data = await callMCP("tools/call", {
+        name: MCP_TOOLS.delete,
+        arguments: { uri: params.uri },
+      });
+      return { content: [{ type: "text", text: extractText(data) || "Deleted" }] };
+    },
+
+    renderCall(args, theme) {
+      return new Text(theme.fg("toolTitle", theme.bold("🗑️ Delete ")) + theme.fg("accent", (args.uri as string) ?? ""), 0, 0);
     },
 
     renderResult(result, _options, theme) {
