@@ -1,6 +1,6 @@
 {
   "name": "pi-atuin",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "type": "module",
   "description": "Atuin-style fuzzy history search for pi. Press ↑ for interactive history.",
   "license": "MIT",
@@ -23,7 +23,7 @@
     "image": "https://raw.githubusercontent.com/RealAlexandreAI/pi-atuin/master/screenshot.png"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.84.2"
+    "@earendil-works/pi-coding-agent": "^0.85.1"
   },
   "scripts": {
     "test": "node --test test/*.test.ts"
