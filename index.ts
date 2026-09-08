@@ -45,7 +45,10 @@ export default function piAtuin(pi: ExtensionAPI) {
 		if (ctx.mode !== "tui") return;
 
 		ctx.ui.setEditorComponent((tui, theme, keybindings) => {
-			const editor = new CustomEditor(tui, theme, keybindings);
+			// embedWorkingStatus (v0.85.0+): render status spinners in the editor's top
+			// border like the built-in editor instead of the separate status row.
+			// Older pi runtimes ignore the option and fall back to the status container.
+			const editor = new CustomEditor(tui, theme, keybindings, { embedWorkingStatus: true });
 
 			editor.onExtensionShortcut = (data: string) => {
 				if (matchesKey(data, Key.up) && editor.getText().length === 0) {
