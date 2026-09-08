@@ -211,10 +211,10 @@ export default function (pi: ExtensionAPI): void {
     name: "noc_boot",
     label: "Boot Memory",
     description:
-      "Call at session start. Loads core memories, recent context, triggers (system://triggers), and today's working-memory briefing. Self-discipline startup protocol.",
+      "Call at session start. Loads system://boot, system://recent/5, system://triggers, then best-effort system://briefing. Afterward read system://focus (recent is a briefing subset). Self-discipline startup protocol.",
     promptGuidelines: [
       "MUST call at session start before any other work.",
-      "Loads core identity, recent context, system://triggers, and daily briefing.",
+      "Loads system://boot, system://recent/5, system://triggers, then best-effort system://briefing.",
     ],
     parameters: Type.Object({}),
 

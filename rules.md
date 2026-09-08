@@ -1,12 +1,12 @@
 # Noc Memory Rules
 
 ## Self-Discipline Startup Protocol
-At the start of every new session, the agent MUST call `noc_boot` before doing anything else. This loads `system://boot`, `system://recent/5`, `system://triggers`, and today's working-memory briefing. Then read `system://focus` to see which working trees were touched recently and resume the active one (`system://recent` is a subset of the briefing — no need to read it separately).
+At the start of every new session, the agent MUST call `noc_boot` before doing anything else. `noc_boot` loads `BOOT_URIS` = `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`. Then read `system://focus` to see which working trees were touched recently and resume the active one. (`system://recent` is already a subset of the briefing — after boot you do not need to read recent again, but boot itself still loads `recent/5`.)
 
 ## Mechanism: pull, not push
 Memory is never pushed into context. Only the boot layer is always present; everything else arrives only when you actively `read` or `search`.
 
-- The **boot layer** is `system://boot` (core identity) + recent context + `system://triggers` (trigger keywords).
+- The **boot layer** is `system://boot` (core identity) + `system://recent/5` + `system://triggers` (trigger keywords), then briefing + focus.
 - **Disclosure** is a "should I read this node?" hint — it only fires for nodes already in view, it is not an automatic trigger, and it never scans the user's live input.
 - **Trigger keywords** (listed in `system://triggers`) surface related memories in the triggers section of whatever you read. They build links between memories; they do not catch user messages.
 - **Hard facts** (red lines, identity, key preferences) must live in boot-layer node content — a memory that only hangs on disclosure or a trigger keyword will not be reliably recalled.
