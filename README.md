@@ -33,14 +33,14 @@ Add to `~/.claude/rules.md` or project rules:
 Set your MCP endpoint (new path, or legacy `pi-nocturne-memory` path):
 
 ```json
-{ "mcpUrl": "https://dejavu.example.com/mcp", "mcpHeaders": { "CF-Access-Client-Id": "<service-token-id>", "CF-Access-Client-Secret": "<service-token-secret>" } }
+{ "mcpUrl": "https://mem.example.com/mcp", "mcpHeaders": { "CF-Access-Client-Id": "<service-token-id>", "CF-Access-Client-Secret": "<service-token-secret>" } }
 ```
 
-For servers behind Cloudflare Access (e.g. dejavu.example.com), pass the **service token** headers instead of `mcpAuth`:
+For servers behind Cloudflare Access (e.g. mem.example.com), pass the **service token** headers instead of `mcpAuth`:
 
 ```json
 {
-  "mcpUrl": "https://dejavu.example.com/mcp",
+  "mcpUrl": "https://mem.example.com/mcp",
   "mcpHeaders": {
     "CF-Access-Client-Id": "your-client-id",
     "CF-Access-Client-Secret": "your-client-secret"
