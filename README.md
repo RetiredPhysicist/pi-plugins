@@ -4,7 +4,7 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="pi-noc-memory — SessionStart boot protocol + memory tools for Pi">
 </p>
 
-**Noc Memory extension for Pi — automated memory management with SessionStart boot protocol.**
+**DejaVu (Noc Memory) extension for Pi — automated memory management with SessionStart boot protocol.**
 
 Agent-side companion to [cf-noc-mem](https://github.com/RealAlexandreAI/cf-noc-mem) (the Cloudflare-hosted MCP memory server). Also available for dsh: [dsh-noc-memory](https://github.com/RealAlexandreAI/dsh-noc-memory).
 
@@ -33,14 +33,14 @@ Add to `~/.claude/rules.md` or project rules:
 Set your MCP endpoint (new path, or legacy `pi-nocturne-memory` path):
 
 ```json
-{ "mcpUrl": "https://mem.example.com/mcp", "mcpHeaders": { "CF-Access-Client-Id": "<service-token-id>", "CF-Access-Client-Secret": "<service-token-secret>" } }
+{ "mcpUrl": "https://dejavu.example.com/mcp", "mcpHeaders": { "CF-Access-Client-Id": "<service-token-id>", "CF-Access-Client-Secret": "<service-token-secret>" } }
 ```
 
-For servers behind Cloudflare Access (e.g. mem.example.com), pass the **service token** headers instead of `mcpAuth`:
+For servers behind Cloudflare Access (e.g. dejavu.example.com), pass the **service token** headers instead of `mcpAuth`:
 
 ```json
 {
-  "mcpUrl": "https://mem.example.com/mcp",
+  "mcpUrl": "https://dejavu.example.com/mcp",
   "mcpHeaders": {
     "CF-Access-Client-Id": "your-client-id",
     "CF-Access-Client-Secret": "your-client-secret"
