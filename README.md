@@ -7,7 +7,7 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="pi-dejavu-memory — SessionStart boot protocol + memory tools for Pi">
 </p>
 
-**DejaVu (Noc Memory) extension for Pi — automated memory management with SessionStart boot protocol.**
+**DejaVu extension for Pi — automated memory management with SessionStart boot protocol.**
 
 Agent-side companion to [DejaVu](https://github.com/RealAlexandreAI/DejaVu) (the Cloudflare-hosted MCP memory server). Also available for dsh: [dsh-dejavu-memory](https://github.com/RealAlexandreAI/dsh-dejavu-memory).
 
@@ -30,7 +30,7 @@ pi install npm:pi-dejavu-memory
 Add to `~/.claude/rules.md` or project rules:
 
 ```markdown
-- noc-memory rules (from pi-dejavu-memory extension)
+- DejaVu memory rules (from pi-dejavu-memory extension)
 ```
 
 Set your MCP endpoint (new path, or legacy `pi-nocturne-memory` path):
