@@ -19,9 +19,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-
-      - name: Upgrade npm
-        run: npm install -g npm@latest && npm config set registry https://registry.npmjs.org/
+          registry-url: "https://registry.npmjs.org"
 
       - name: Publish
-        run: npm publish --access public
+        run: npx npm@latest publish --access public
