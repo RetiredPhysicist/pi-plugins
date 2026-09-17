@@ -1,4 +1,4 @@
-# Noc Memory Rules
+# DejaVu Memory Rules
 
 ## Self-Discipline Startup Protocol
 At the start of every new session, the agent MUST call `noc_boot` before doing anything else. `noc_boot` loads `BOOT_URIS` = `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`. Then read `system://focus` to see which working trees were touched recently and resume the active one. (`system://recent` is already a subset of the briefing — after boot you do not need to read recent again, but boot itself still loads `recent/5`.)
