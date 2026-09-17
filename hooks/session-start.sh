@@ -1,5 +1,5 @@
 #!/bin/bash
-# SessionStart hook for pi-noc-memory
+# SessionStart hook for pi-dejavu-memory
 # This runs when a new Pi session starts
 
 # Check if noc-memory MCP is available
