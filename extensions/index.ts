@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-noc-memory", "config.json");
+const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-dejavu-memory", "config.json");
 // Legacy path from the old package name — still read so existing installs don't lose config.
 const LEGACY_CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-nocturne-memory", "config.json");
 
@@ -89,7 +89,7 @@ async function initializeSession(): Promise<string | null> {
       params: {
         protocolVersion: "2024-11-05",
         capabilities: {},
-        clientInfo: { name: "pi-noc-memory", version: "1.0.0" },
+        clientInfo: { name: "pi-dejavu-memory", version: "1.0.0" },
       },
     }),
   });
@@ -101,7 +101,7 @@ async function initializeSession(): Promise<string | null> {
 async function callMCP(method: string, params: Record<string, unknown>): Promise<any> {
   if (!MCP_URL) {
     throw new Error(
-      "Noc MCP server not configured. Create ~/.pi/agent/extensions/pi-noc-memory/config.json with " +
+      "Noc MCP server not configured. Create ~/.pi/agent/extensions/pi-dejavu-memory/config.json with " +
       '{ "mcpUrl": "http://localhost:PORT/mcp", "mcpAuth": "Bearer ..." } — ' +
       "the extension loads fine without it; memory tools activate once configured.",
     );

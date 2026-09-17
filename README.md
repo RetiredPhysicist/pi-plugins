@@ -1,12 +1,15 @@
-# pi-noc-memory
+# pi-dejavu-memory
+
+> **Renamed:** former npm/GitHub package `pi-noc-memory` → **`pi-dejavu-memory`**. Prefer this package.
+
 
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="pi-noc-memory — SessionStart boot protocol + memory tools for Pi">
+  <img src="./assets/readme/hero.svg" width="100%" alt="pi-dejavu-memory — SessionStart boot protocol + memory tools for Pi">
 </p>
 
 **DejaVu (Noc Memory) extension for Pi — automated memory management with SessionStart boot protocol.**
 
-Agent-side companion to [cf-noc-mem](https://github.com/RealAlexandreAI/cf-noc-mem) (the Cloudflare-hosted MCP memory server). Also available for dsh: [dsh-noc-memory](https://github.com/RealAlexandreAI/dsh-noc-memory).
+Agent-side companion to [DejaVu](https://github.com/RealAlexandreAI/DejaVu) (the Cloudflare-hosted MCP memory server). Also available for dsh: [dsh-dejavu-memory](https://github.com/RealAlexandreAI/dsh-dejavu-memory).
 
 ## Features
 
@@ -17,17 +20,17 @@ Agent-side companion to [cf-noc-mem](https://github.com/RealAlexandreAI/cf-noc-m
 ## Install
 
 ```bash
-pi install npm:pi-noc-memory
+pi install npm:pi-dejavu-memory
 ```
 
-> **Upgrading from pi-nocturne-memory (≤1.0.x):** the package was renamed to `pi-noc-memory` and tools renamed from `nocturne_*` to `noc_*`. Old config at `~/.pi/agent/extensions/pi-nocturne-memory/config.json` is still read as a fallback, so your MCP URL/credentials keep working — just reinstall the new package and update any prompt text that referenced `nocturne_*` tools.
+> **Upgrading from pi-nocturne-memory (≤1.0.x):** the package was renamed to `pi-dejavu-memory` and tools renamed from `nocturne_*` to `noc_*`. Old config at `~/.pi/agent/extensions/pi-nocturne-memory/config.json` is still read as a fallback, so your MCP URL/credentials keep working — just reinstall the new package and update any prompt text that referenced `nocturne_*` tools.
 
 ## Configure
 
 Add to `~/.claude/rules.md` or project rules:
 
 ```markdown
-- noc-memory rules (from pi-noc-memory extension)
+- noc-memory rules (from pi-dejavu-memory extension)
 ```
 
 Set your MCP endpoint (new path, or legacy `pi-nocturne-memory` path):
@@ -68,6 +71,6 @@ MIT
 
 ## Related
 
-- [cf-noc-mem](https://github.com/RealAlexandreAI/cf-noc-mem) — the MCP memory server this extension talks to
-- [dsh-noc-memory](https://github.com/RealAlexandreAI/dsh-noc-memory) — same memory tools for dsh
+- [DejaVu](https://github.com/RealAlexandreAI/DejaVu) — the MCP memory server this extension talks to
+- [dsh-dejavu-memory](https://github.com/RealAlexandreAI/dsh-dejavu-memory) — same memory tools for dsh
 - [nocturne_memory](https://github.com/Dataojitori/nocturne_memory) — upstream project
