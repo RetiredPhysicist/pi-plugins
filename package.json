@@ -1,6 +1,6 @@
 {
   "name": "pi-dejavu-memory",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "description": "DejaVu memory extension for Pi — automated memory management with SessionStart boot protocol",
   "license": "MIT",
   "type": "module",
@@ -21,8 +21,8 @@
     ]
   },
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "^0.87.0",
-    "@earendil-works/pi-tui": "^0.87.0",
+    "@earendil-works/pi-coding-agent": "^0.87.1",
+    "@earendil-works/pi-tui": "^0.87.1",
     "typebox": "^1.3.34"
   },
   "devDependencies": {
