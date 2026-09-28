@@ -1,6 +1,6 @@
 {
   "name": "pi-gemini-multimodal",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Multimodal perception for Pi — image/audio/video/document understanding, transcription & image generation via Gemini (gemini_api or local antigravity CLI).",
   "license": "MIT",
   "type": "module",
@@ -24,7 +24,7 @@
     "typebox": "^1.3.34"
   },
   "devDependencies": {
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
