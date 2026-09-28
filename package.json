@@ -1,6 +1,6 @@
 {
   "name": "pi-codebuddy-sdk",
-  "version": "0.4.13",
+  "version": "0.4.14",
   "description": "Pi extension that uses CodeBuddy (via Agent SDK) as a model provider and adds an AskCodebuddy tool.",
   "author": "slahser",
   "license": "MIT",
@@ -45,7 +45,7 @@
     "@earendil-works/pi-ai": "^0.87.1",
     "@earendil-works/pi-coding-agent": "^0.87.1",
     "@earendil-works/pi-tui": "^0.87.1",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
