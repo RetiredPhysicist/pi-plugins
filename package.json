@@ -12,7 +12,7 @@
   },
   "repository": "github:RealAlexandreAI/pi-shannon-statusline",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.84.4"
+    "@earendil-works/pi-coding-agent": ">=0.87.1"
   },
   "keywords": [
     "pi-package",
