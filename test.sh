@@ -34,7 +34,7 @@ else
 fi
 
 # Test 4: Provider files exist
-for provider in exa tavily anysearch firecrawl context7; do
+for provider in exa tavily anysearch tinyfish firecrawl context7; do
   if [ -f "src/providers/${provider}.ts" ]; then
     echo "✓ Provider ${provider} exists"
   else
