@@ -4,6 +4,7 @@ import { ANYSEARCH_META, AnysearchProvider } from "./anysearch.js";
 import { FIRECRAWL_META, FirecrawlProvider } from "./firecrawl.js";
 import { FIRECRAWL_DEV_META, FirecrawlDevProvider } from "./firecrawl-dev.js";
 import { CONTEXT7_META, Context7Provider } from "./context7.js";
+import { TINYFISH_META, TinyFishProvider } from "./tinyfish.js";
 import type { SearchProvider } from "./types.js";
 
 export interface ProviderMeta {
@@ -19,6 +20,7 @@ export const PROVIDERS: readonly ProviderMeta[] = [
   FIRECRAWL_META,
   FIRECRAWL_DEV_META,
   CONTEXT7_META,
+  TINYFISH_META,
 ];
 
 export function createProvider(name: string, apiKey?: string): SearchProvider {
@@ -35,6 +37,8 @@ export function createProvider(name: string, apiKey?: string): SearchProvider {
       return new FirecrawlDevProvider(apiKey);
     case "context7":
       return new Context7Provider(apiKey ?? "");
+    case "tinyfish":
+      return new TinyFishProvider(apiKey ?? "");
     default:
       throw new Error(`Unknown provider: "${name}". Available: ${PROVIDERS.map((p) => p.name).join(", ")}`);
   }

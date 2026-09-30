@@ -1,7 +1,30 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { loadConfig } from "./config.js";
+import { loadConfig, resolveApiKey } from "./config.js";
+import { TINYFISH_META, TinyFishProvider } from "./providers/tinyfish.js";
+
+interface FetchDetails {
+  url: string;
+  provider: "tinyfish" | "local";
+  length: number;
+  contentType?: string;
+  error?: string;
+}
+
+async function fetchWithTinyFish(
+  url: string,
+  apiKey: string,
+  prompt?: string,
+): Promise<{ content: string; title?: string } | null> {
+  const provider = new TinyFishProvider(apiKey);
+  const data = await provider.fetchContent([url], { timeoutMs: 45000, purpose: prompt });
+  const page = data.results?.find((r) => r.text);
+  if (!page?.text) return null;
+  const error = data.errors?.find((e) => e.url === url);
+  if (error) return null;
+  return { title: page.title ?? undefined, content: page.text };
+}
 
 export function registerExtractTool(pi: ExtensionAPI): void {
   pi.registerTool({
@@ -23,9 +46,26 @@ export function registerExtractTool(pi: ExtensionAPI): void {
       ),
     }),
 
-    async execute(_toolCallId, params) {
+    async execute(_toolCallId, params, signal) {
       const config = loadConfig();
       const url = params.url;
+      const prompt = params.prompt;
+
+      const tinyFishKey = resolveApiKey(TINYFISH_META.name, TINYFISH_META.envVar, config);
+      if (tinyFishKey) {
+        try {
+          const page = await fetchWithTinyFish(url, tinyFishKey, prompt);
+          if (page?.content) {
+            const details: FetchDetails = { url, provider: "tinyfish", length: page.content.length };
+            return {
+              content: [{ type: "text", text: page.content }],
+              details,
+            };
+          }
+        } catch {
+          // fall through to the local extractor
+        }
+      }
 
       try {
         const resp = await fetch(url, {
@@ -33,16 +73,25 @@ export function registerExtractTool(pi: ExtensionAPI): void {
             "User-Agent": "Mozilla/5.0 (compatible; PiAllSearch/1.0)",
             Accept: "text/html,application/json,application/markdown,text/plain,*/*",
           },
+          signal,
         });
 
+        const contentType = resp.headers.get("content-type") ?? "";
+
         if (!resp.ok) {
+          const details: FetchDetails = {
+            url,
+            provider: "local",
+            length: 0,
+            contentType,
+            error: `HTTP ${resp.status}`,
+          };
           return {
             content: [{ type: "text", text: `Failed to fetch ${url}: ${resp.status} ${resp.statusText}` }],
-            details: { error: `HTTP ${resp.status}` },
+            details,
           };
         }
 
-        const contentType = resp.headers.get("content-type") ?? "";
         const text = await resp.text();
 
         let content: string;
@@ -61,12 +110,13 @@ export function registerExtractTool(pi: ExtensionAPI): void {
 
         return {
           content: [{ type: "text", text: content }],
-          details: { url, contentType, length: content.length },
+          details: { url, provider: "local", contentType, length: content.length } satisfies FetchDetails,
         };
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         return {
-          content: [{ type: "text", text: `Error fetching ${url}: ${err instanceof Error ? err.message : String(err)}` }],
-          details: { error: err instanceof Error ? err.message : String(err) },
+          content: [{ type: "text", text: `Error fetching ${url}: ${message}` }],
+          details: { url, provider: "local", length: 0, error: message } satisfies FetchDetails,
         };
       }
     },
@@ -79,10 +129,11 @@ export function registerExtractTool(pi: ExtensionAPI): void {
 
     renderResult(result, { isPartial }, theme) {
       if (isPartial) return new Text(theme.fg("warning", "Fetching..."), 0, 0);
-      const d = result.details as { error?: string; length?: number } | undefined;
+      const d = result.details as FetchDetails | undefined;
       if (d?.error) return new Text(theme.fg("error", d.error), 0, 0);
       const len = d?.length ?? 0;
-      return new Text(theme.fg("success", `✓ ${len} chars fetched`), 0, 0);
+      const via = d?.provider === "tinyfish" ? " via TinyFish" : "";
+      return new Text(theme.fg("success", `✓ ${len} chars fetched${via}`), 0, 0);
     },
   });
 }

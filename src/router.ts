@@ -20,11 +20,11 @@ export function classifyIntent(query: string): SearchIntent {
 
 const INTENT_PROVIDERS: Record<SearchIntent, string[]> = {
   finance: ["anysearch", "exa", "tavily"],
-  academic: ["exa", "anysearch", "tavily"],
+  academic: ["tinyfish", "exa", "anysearch", "tavily"],
   docs: ["context7", "exa", "tavily"],
   technical: ["firecrawl-dev", "firecrawl", "exa", "tavily"],
-  news: ["tavily", "anysearch", "exa"],
-  general: ["tavily", "anysearch", "exa", "firecrawl"],
+  news: ["tinyfish", "tavily", "anysearch", "exa"],
+  general: ["tavily", "tinyfish", "anysearch", "exa", "firecrawl"],
 };
 
 export function routeIntent(

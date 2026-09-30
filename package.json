@@ -1,7 +1,7 @@
 {
   "name": "pi-all-search",
-  "version": "1.1.10",
-  "description": "All-in-one web search extension for Pi — exa, tavily, anysearch, firecrawl, context7",
+  "version": "1.1.11",
+  "description": "All-in-one web search extension for Pi — exa, tavily, anysearch, tinyfish, firecrawl, context7",
   "license": "MIT",
   "type": "module",
   "repository": "github:RealAlexandreAI/pi-all-search",
