@@ -1,0 +1,18 @@
+{
+  "name": "pi-all-tools",
+  "version": "1.0.7",
+  "description": "Enable all 7 built-in Pi tools by default (read, bash, edit, write, grep, find, ls)",
+  "license": "MIT",
+  "repository": "github:RealAlexandreAI/pi-all-tools",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "extension"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  }
+}
