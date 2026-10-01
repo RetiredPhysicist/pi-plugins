@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       packages: ${{ steps.pick.outputs.packages }}
+      matrix: ${{ steps.pick.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,6 +38,12 @@ jobs:
             fi
           fi
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          if [ -n "$packages" ]; then
+            json=$(printf '%s' "$packages" | jq -R -c 'split(",")')
+          else
+            json='[]'
+          fi
+          echo "matrix=$json" >> "$GITHUB_OUTPUT"
           echo "Packages: ${packages:-none}"
 
   test:
@@ -46,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJSON(format('["{0}"]', replace(needs.changed.outputs.packages, ',', '","'))) }}
+        package: ${{ fromJSON(needs.changed.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
 
