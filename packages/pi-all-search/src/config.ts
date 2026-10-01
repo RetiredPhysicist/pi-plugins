@@ -1,0 +1,48 @@
+import { PROVIDERS } from "./providers/index.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
+
+const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-all-search", "config.json");
+
+export interface SearchConfig {
+  apiKeys: Record<string, string>;
+  provider?: string;
+  cacheTtlMs?: number;
+  maxResults?: number;
+}
+
+export function loadConfig(): SearchConfig {
+  const apiKeys: Record<string, string> = {};
+  const env = process.env;
+
+  for (const meta of PROVIDERS) {
+    const key = env[meta.envVar];
+    if (key) apiKeys[meta.name] = key;
+  }
+
+  let provider: string | undefined;
+  let cacheTtlMs: number | undefined;
+  let maxResults: number | undefined;
+
+  try {
+    const config = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+    provider = config.provider;
+    cacheTtlMs = config.cacheTtlMs;
+    maxResults = config.maxResults;
+    // Config apiKeys override env
+    if (config.apiKeys) {
+      for (const [name, key] of Object.entries(config.apiKeys)) {
+        if (key) apiKeys[name] = key;
+      }
+    }
+  } catch {
+    // use defaults
+  }
+
+  return { apiKeys, provider, cacheTtlMs, maxResults };
+}
+
+export function resolveApiKey(name: string, envVar: string, config: SearchConfig): string | undefined {
+  return config.apiKeys[name] ?? process.env[envVar];
+}
