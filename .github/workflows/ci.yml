@@ -63,6 +63,9 @@ jobs:
           cache: npm
           cache-dependency-path: packages/${{ matrix.package }}/package-lock.json
 
+      - name: Prepare test home
+        run: mkdir -p "$HOME/.pi/agent"
+
       - name: Install
         working-directory: packages/${{ matrix.package }}
         run: |
