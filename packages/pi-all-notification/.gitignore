@@ -1,0 +1,6 @@
+node_modules/
+.plans/
+# Runtime config with secrets lives at ~/.pi/agent/extensions/pi-all-notification/config.json
+# Repo config.json is a clean template only
+*.log
+.DS_Store
