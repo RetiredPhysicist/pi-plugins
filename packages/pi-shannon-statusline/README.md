@@ -23,7 +23,7 @@ pi install npm:pi-shannon-statusline
 From a checkout:
 
 ```bash
-git clone https://github.com/RealAlexandreAI/pi-shannon-statusline.git
+git clone https://github.com/RetiredPhysicist/pi-plugins.git && cd pi-plugins/packages/pi-shannon-statusline.git
 cd pi-shannon-statusline
 pi install .
 ```

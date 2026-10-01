@@ -7,7 +7,8 @@
   "author": "RealAlexandreAI",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RealAlexandreAI/pi-atuin.git"
+    "url": "git+https://github.com/RetiredPhysicist/pi-plugins.git",
+    "directory": "packages/pi-atuin"
   },
   "keywords": [
     "pi-package",
@@ -20,7 +21,7 @@
     "extensions": [
       "./index.ts"
     ],
-    "image": "https://raw.githubusercontent.com/RealAlexandreAI/pi-atuin/master/screenshot.png"
+    "image": "https://raw.githubusercontent.com/RetiredPhysicist/pi-plugins/main/packages/pi-atuin/screenshot.png"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "^0.87.1"
