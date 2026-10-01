@@ -58,7 +58,8 @@ jobs:
 
       - name: Install
         working-directory: packages/${{ matrix.package }}
-        run: npm ci || npm install
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Typecheck
         working-directory: packages/${{ matrix.package }}
@@ -66,4 +67,11 @@ jobs:
 
       - name: Test
         working-directory: packages/${{ matrix.package }}
-        run: npm test --if-present
+        run: |
+          if npm run | grep -q '^  test:ci$'; then
+            npm run test:ci
+          elif npm run | grep -q '^  test:unit$'; then
+            npm run test:unit
+          else
+            npm test --if-present
+          fi
