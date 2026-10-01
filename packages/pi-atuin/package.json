@@ -1,8 +1,8 @@
 {
   "name": "pi-atuin",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "type": "module",
-  "description": "Atuin-style fuzzy history search for pi. Press ↑ for interactive history.",
+  "description": "Atuin-style fuzzy history search for pi. Press \u2191 for interactive history.",
   "license": "MIT",
   "author": "RealAlexandreAI",
   "repository": {

@@ -1,9 +1,13 @@
 {
   "name": "pi-all-tools",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Enable all 7 built-in Pi tools by default (read, bash, edit, write, grep, find, ls)",
   "license": "MIT",
-  "repository": "github:RetiredPhysicist/pi-plugins",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RetiredPhysicist/pi-plugins.git",
+    "directory": "packages/pi-all-tools"
+  },
   "keywords": [
     "pi-package",
     "pi",
