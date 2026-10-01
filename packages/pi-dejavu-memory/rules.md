@@ -1,0 +1,77 @@
+# DejaVu Memory Rules
+
+## Self-Discipline Startup Protocol
+At the start of every new session, the agent MUST call `noc_boot` before doing anything else. `noc_boot` loads `BOOT_URIS` = `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`. Then read `system://focus` to see which working trees were touched recently and resume the active one. (`system://recent` is already a subset of the briefing — after boot you do not need to read recent again, but boot itself still loads `recent/5`.)
+
+## Mechanism: pull, not push
+Memory is never pushed into context. Only the boot layer is always present; everything else arrives only when you actively `read` or `search`.
+
+- The **boot layer** is `system://boot` (core identity) + `system://recent/5` + `system://triggers` (trigger keywords), then briefing + focus.
+- **Disclosure** is a "should I read this node?" hint — it only fires for nodes already in view, it is not an automatic trigger, and it never scans the user's live input.
+- **Trigger keywords** (listed in `system://triggers`) surface related memories in the triggers section of whatever you read. They build links between memories; they do not catch user messages.
+- **Hard facts** (red lines, identity, key preferences) must live in boot-layer node content — a memory that only hangs on disclosure or a trigger keyword will not be reliably recalled.
+
+## Memory OPERATIONS
+
+### Reading
+- IF user mentions a topic you should have memory about → `noc_read` first
+- IF unsure about a memory URI → use `noc_search`; **describe what you need in natural language (concept/意图), not just the exact words** — semantic recall finds memories with no shared keywords (e.g. "部署失败" finds a note about a broken release pipeline); keywords still work, but don't limit yourself to them
+- IF conversation exceeds 15 turns → `noc_read` to recalibrate
+- IF a disclosure condition in view is triggered → must read immediately
+
+### Writing
+Judge: **does this change your future behavior?** If no, don't write it.
+- New insights/understandings → `noc_create`
+- User reveals new info about themselves → `noc_create`
+- Relationship events → `noc_create`
+- Technical conclusions reusable across sessions → `noc_create`
+- Successful judgments → `noc_create` with [Baseline], [Deviation], [Result], [Reusable judgment] format
+- **Prefer `noc_update` over `noc_create`**: identity is the URI, not the Memory ID — if the topic already has a node, update it.
+
+Choose `parent_uri` by where you would naturally look for this memory when you need it. A child's disclosure only shows when its parent is read — wrong parent = never recalled. Add extra entry points with `add_alias`.
+
+`priority`: non-negative integer, lower = more important. Boot-layer/red-line facts get small numbers; corner knowledge gets larger ones.
+
+### Updating
+- Found inaccurate info → `noc_update` immediately
+- User corrects you → `noc_update`
+- Outdated info → `noc_update`
+- When you say "I understand / from now on I should…", stop and check: does the memory exist? No → create. Yes but stale → update.
+
+### Deleting
+- New insight covers old record → delete redundant nodes
+- Bug/error/low quality → delete
+- Always `noc_read` the full node before deleting (never judge by URI/title alone)
+- Deleting a node with children: system may return orphans to handle first — follow the list
+
+### Conflict handling
+Never keep two conflicting versions. When a read surfaces a conflict with an existing memory, resolve it with `noc_update` — merge or supersede, don't keep both and pick by priority later.
+
+## Memory Value Principle
+Memory value = ability to change behavior. If remembering something doesn't change your action, it's dead data worth deleting.
+
+## Memory Audit (periodic self-maintenance)
+Run when: after ~30-50 new memories, when you keep repeating the same mistake, or when `noc_boot`/`noc_briefing` surfaces stale-looking entries. Start with `noc_read("system://diagnostic/noc")` — it reports the known problem classes.
+
+### Diagnostic signals → action
+
+| Signal | Meaning | Action |
+|--------|---------|--------|
+| High-priority, never re-accessed | disclosure/parent placement wrong, or priority inflated | Fix disclosure to fire on observable input; move under a parent you actually read; demote priority |
+| Stale / cold candidates | memory hasn't been read in a long time | First ask WHY it wasn't read. Dead data → delete. Wrong placement → fix. Still valuable but niche → demote, don't delete |
+| Crowded parent (>10 children) | too many nodes under one parent | Extract shared pattern into a parent memory; or regroup children under sub-parents |
+| Bloat (>800 tokens, not a spec) | multiple concepts crammed into one node | Split into separate nodes; each node = one retrievable unit |
+| Conflicting memories | two nodes contradict | Merge/supersede via `noc_update` — never keep both |
+
+### Rules of the audit
+- Always `noc_read` the full node before modifying — never judge by URI/title alone.
+- When updating, your new version **replaces** the old (identity is the URI, not the Memory ID).
+- If the same topic got rewritten multiple times in one session, stop editing — you don't have a stable position yet. Leave it, let it settle.
+- The goal is a memory library that changes your behavior, not a clean archive. Deleting a memory that still affects your decisions is a loss, not tidy upkeep.
+
+## Tool set awareness
+Your daily loop is 5 tools: `noc_read` / `noc_search` / `noc_create` / `noc_update` / `noc_delete`.
+- `list_memories`, `add_alias`, `manage_triggers`, `rename_memory`: occasional housekeeping.
+- `rollback_memory` + `list_audit`: recovery after a bad edit — not for routine use.
+- `reindex_vectors`: **operator maintenance, never call it** — it backfills semantic vectors after server upgrades; you have nothing to reindex.
+- `noc_boot` is handled by the session hook; call it manually only when the hook did not run.
