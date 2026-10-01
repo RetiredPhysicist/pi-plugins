@@ -8,9 +8,9 @@
     "extensions": [
       "./src/index.ts"
     ],
-    "image": "https://raw.githubusercontent.com/RealAlexandreAI/pi-shannon-statusline/master/shannon-statusline.png"
+    "image": "https://raw.githubusercontent.com/RetiredPhysicist/pi-plugins/main/packages/pi-shannon-statusline/shannon-statusline.png"
   },
-  "repository": "github:RealAlexandreAI/pi-shannon-statusline",
+  "repository": "github:RetiredPhysicist/pi-plugins",
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": ">=0.87.1"
   },
