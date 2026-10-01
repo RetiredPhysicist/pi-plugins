@@ -1,0 +1,431 @@
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
+import { Type } from "typebox";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
+
+const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-dejavu-memory", "config.json");
+// Legacy path from the old package name — still read so existing installs don't lose config.
+const LEGACY_CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-nocturne-memory", "config.json");
+
+function loadConfig(): { mcpUrl?: string; mcpAuth?: string; mcpHeaders?: Record<string, string> } {
+  const env = process.env;
+  const result: { mcpUrl?: string; mcpAuth?: string; mcpHeaders?: Record<string, string> } = {};
+
+  // Config file takes priority (new path first, then legacy)
+  try {
+    const fileConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+    result.mcpUrl = fileConfig.mcpUrl;
+    result.mcpAuth = fileConfig.mcpAuth;
+    result.mcpHeaders = fileConfig.mcpHeaders;
+  } catch {
+    try {
+      const fileConfig = JSON.parse(readFileSync(LEGACY_CONFIG_PATH, "utf8"));
+      result.mcpUrl = fileConfig.mcpUrl;
+      result.mcpAuth = fileConfig.mcpAuth;
+      result.mcpHeaders = fileConfig.mcpHeaders;
+    } catch {
+      // use defaults
+    }
+  }
+
+  // Env vars as fallback
+  if (!result.mcpUrl && env.NOCTURNE_MCP_URL) {
+    result.mcpUrl = env.NOCTURNE_MCP_URL;
+  }
+  if (!result.mcpAuth && env.NOCTURNE_MCP_AUTH) {
+    result.mcpAuth = env.NOCTURNE_MCP_AUTH;
+  }
+
+  return result;
+}
+
+const config = loadConfig();
+const MCP_URL = config.mcpUrl;
+const MCP_AUTH = config.mcpAuth;
+// Extra headers merged into every MCP request — e.g. Cloudflare Access
+// service token ("CF-Access-Client-Id" / "CF-Access-Client-Secret").
+const MCP_HEADERS: Record<string, string> = config.mcpHeaders ?? {};
+// Zero-config boot: the extension always loads. Missing server config
+// surfaces as a friendly hint on tool calls (see callMCP), not at startup.
+
+/** Boot resources read via read_memory (boot + recent + triggers). */
+export const BOOT_URIS = ["system://boot", "system://recent/5", "system://triggers"] as const;
+
+/** MCP tool names as exposed by cf-noc-mem (must stay in sync with the server). */
+export const MCP_TOOLS = {
+  read: "read_memory",
+  search: "search_memory", // not search_memories
+  create: "create_memory",
+  update: "update_memory",
+  delete: "delete_memory",
+} as const;
+
+let sessionId: string | null = null;
+// MCP 2.0 (2026-07-28) is stateless: no handshake, no session. Probe once —
+// 2.0 servers answer without a session, legacy (2025-era) servers demand one.
+let mode: "unknown" | "stateless" | "legacy" = "unknown";
+
+function isMissingSession(parsed: any): boolean {
+  const code = parsed?.error?.code;
+  const message = String(parsed?.error?.message ?? "").toLowerCase();
+  return code === -32600 || message.includes("session");
+}
+
+async function initializeSession(): Promise<string | null> {
+  const resp = await fetch(MCP_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      Authorization: MCP_AUTH,
+      ...MCP_HEADERS,
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: "init-" + Date.now(),
+      method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "pi-dejavu-memory", version: "1.0.0" },
+      },
+    }),
+  });
+
+  const sid = resp.headers.get("mcp-session-id");
+  return sid;
+}
+
+async function callMCP(method: string, params: Record<string, unknown>): Promise<any> {
+  if (!MCP_URL) {
+    throw new Error(
+      "Noc MCP server not configured. Create ~/.pi/agent/extensions/pi-dejavu-memory/config.json with " +
+      '{ "mcpUrl": "http://localhost:PORT/mcp", "mcpAuth": "Bearer ..." } — ' +
+      "the extension loads fine without it; memory tools activate once configured.",
+    );
+  }
+  // MCP 2.0 stateless path: try without a session first (no initialize).
+  if (mode !== "legacy") {
+    const resp = await fetch(MCP_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        Authorization: MCP_AUTH,
+        ...MCP_HEADERS,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: method + Date.now(), method, params }),
+    });
+    if (resp.ok) {
+      const parsed = parseStreamResponse(await resp.text());
+      if (!isMissingSession(parsed)) {
+        mode = "stateless";
+        const newSid = resp.headers.get("mcp-session-id");
+        if (newSid) sessionId = newSid;
+        return parsed;
+      }
+      // Legacy server demands a session — fall through to handshake.
+    }
+  }
+
+  mode = "legacy";
+  if (!sessionId) {
+    sessionId = await initializeSession();
+    if (!sessionId) {
+      return { error: { code: -1, message: "Failed to initialize MCP session" } };
+    }
+  }
+
+  const resp = await fetch(MCP_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      Authorization: MCP_AUTH,
+      ...MCP_HEADERS,
+      "Mcp-Session-Id": sessionId,
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", id: method + Date.now(), method, params }),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => "<unreadable>");
+    return { error: { code: resp.status, message: `HTTP ${resp.status}: ${body.slice(0, 200)}` } };
+  }
+
+  // Check for new session ID in response
+  const newSid = resp.headers.get("mcp-session-id");
+  if (newSid) {
+    sessionId = newSid;
+  }
+
+  return parseStreamResponse(await resp.text());
+}
+
+/** Parse an SSE body into the first JSON-RPC result/error object. Pure logic. */
+export function parseStreamResponse(text: string): any {
+  const lines = text.split(/\r?\n/);
+  let currentData = "";
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("data: ")) {
+      currentData = trimmed.slice(6);
+    } else if (trimmed.startsWith("event: ")) {
+      // ignore event type
+    } else if (trimmed === "" && currentData) {
+      try {
+        const parsed = JSON.parse(currentData);
+        if (parsed.result || parsed.error) {
+          return parsed;
+        }
+      } catch {
+        // continue
+      }
+      currentData = "";
+    }
+  }
+
+  if (currentData) {
+    try {
+      return JSON.parse(currentData);
+    } catch {
+      // ignore
+    }
+  }
+
+  return null;
+}
+
+export function extractText(data: any): string {
+  if (data?.error) {
+    return `Error: ${data.error.message ?? JSON.stringify(data.error)}`;
+  }
+  return data?.result?.content?.[0]?.text ?? "";
+}
+
+export default function (pi: ExtensionAPI): void {
+  pi.registerTool({
+    name: "noc_boot",
+    label: "Boot Memory",
+    description:
+      "Call at session start. Loads system://boot, system://recent/5, system://triggers, then best-effort system://briefing. Afterward read system://focus (recent is a briefing subset). Self-discipline startup protocol.",
+    promptGuidelines: [
+      "MUST call at session start before any other work.",
+      "Loads system://boot, system://recent/5, system://triggers, then best-effort system://briefing.",
+    ],
+    parameters: Type.Object({}),
+
+    async execute(_toolCallId, _params, _signal, onUpdate) {
+      onUpdate?.({ content: [{ type: "text", text: "🌙 Booting..." }], details: { phase: "booting" } });
+
+      const results: string[] = [];
+      const errors: string[] = [];
+
+      for (const uri of BOOT_URIS) {
+        try {
+          const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri } });
+          if (data?.result?.content?.[0]?.text) {
+            results.push(`=== ${uri} ===\n${data.result.content[0].text}`);
+          } else if (data?.error) {
+            errors.push(`${uri}: ${data.error.message}`);
+          }
+        } catch (err) {
+          errors.push(`${uri}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
+      if (results.length === 0 && errors.length > 0) {
+        return { content: [{ type: "text", text: `❌ ${errors.join("\n")}` }], details: { error: errors.join("\n") } };
+      }
+
+      // Daily working-memory briefing: recent activity, expiring, cold candidates.
+      // Best-effort — if the server doesn't implement it, boot still succeeds.
+      try {
+        const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri: "system://briefing" } });
+        if (data?.result?.content?.[0]?.text) {
+          results.push(`=== system://briefing ===\n${data.result.content[0].text}`);
+        }
+      } catch {
+        // ignore — briefing is optional
+      }
+
+      return { content: [{ type: "text", text: results.join("\n\n---\n\n") }], details: { booted: results.length } };
+    },
+
+    renderCall(_args, theme) {
+      return new Text(theme.fg("toolTitle", theme.bold("🌙 Boot")), 0, 0);
+    },
+
+    renderResult(result, _options, theme) {
+      const d = result.details as { error?: string; booted?: number } | undefined;
+      if (d?.error) return new Text(theme.fg("error", "❌ Boot failed"), 0, 0);
+      return new Text(theme.fg("success", `✓ ${d?.booted ?? 0} nodes loaded`), 0, 0);
+    },
+  });
+
+  pi.registerTool({
+    name: "noc_read",
+    label: "Read Memory",
+    description: "Read a memory by URI. Use system:// URIs or memory paths like core://agent.",
+    parameters: Type.Object({
+      uri: Type.String({ description: "Memory URI (e.g., core://agent, system://boot)" }),
+    }),
+
+    async execute(_toolCallId, params) {
+      const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri: params.uri } });
+      const text = extractText(data);
+      return { content: [{ type: "text", text: text || "No content" }] };
+    },
+
+    renderCall(args, theme) {
+      return new Text(theme.fg("toolTitle", theme.bold("📖 ")) + theme.fg("accent", (args.uri as string) ?? ""), 0, 0);
+    },
+
+    renderResult(result, _options, theme) {
+      const text = (result.content?.[0] as any)?.text ?? "";
+      return new Text(theme.fg("success", `✓ ${text.length} chars`), 0, 0);
+    },
+  });
+
+  pi.registerTool({
+    name: "noc_search",
+    label: "Search Memory",
+    description:
+      "Search memories with semantic + keyword recall (multilingual, CJK-capable). Describe what you are looking for in natural language — semantic search finds memories that share no keywords (e.g. query \"部署失败\" recalls a note about a broken release pipeline).",
+    parameters: Type.Object({
+      query: Type.String({ description: "Concept or keywords to search for" }),
+      limit: Type.Optional(Type.Number({ description: "Max results (1-50, default 20)" })),
+      domain: Type.Optional(Type.String({ description: "Domain filter (e.g., core, writer); ignored by current cf-noc-mem" })),
+    }),
+
+    async execute(_toolCallId, params) {
+      const args: Record<string, unknown> = { query: params.query };
+      if (params.limit !== undefined) args.limit = params.limit;
+      if (params.domain) args.domain = params.domain;
+      const data = await callMCP("tools/call", { name: MCP_TOOLS.search, arguments: args });
+      return { content: [{ type: "text", text: extractText(data) || "No results" }] };
+    },
+
+    renderCall(args, theme) {
+      return new Text(theme.fg("toolTitle", theme.bold("🔍 ")) + theme.fg("accent", (args.query as string) ?? ""), 0, 0);
+    },
+
+    renderResult(result, _options, theme) {
+      const text = (result.content?.[0] as any)?.text ?? "";
+      const lines = text.split("\n").filter(Boolean).length;
+      return new Text(theme.fg("success", `✓ ${lines} results`), 0, 0);
+    },
+  });
+
+  pi.registerTool({
+    name: "noc_create",
+    label: "Create Memory",
+    description: "Create a new memory node. Include [Baseline], [Deviation], [Result], [Reusable judgment] for behavior records.",
+    parameters: Type.Object({
+      parent_uri: Type.String({ description: "Parent URI (e.g., core://)" }),
+      content: Type.String({ description: "Memory content (Markdown supported)" }),
+      priority: Type.Number({ description: "Priority (0=highest)", default: 2 }),
+      disclosure: Type.String({ description: "When to recall this memory (e.g., 'When discussing X')" }),
+      title: Type.Optional(Type.String({ description: "Path name (a-z, 0-9, _, -)" })),
+    }),
+
+    async execute(_toolCallId, params) {
+      const data = await callMCP("tools/call", {
+        name: MCP_TOOLS.create,
+        arguments: {
+          parent_uri: params.parent_uri,
+          content: params.content,
+          priority: params.priority,
+          disclosure: params.disclosure,
+          ...(params.title ? { title: params.title } : {}),
+        },
+      });
+      return { content: [{ type: "text", text: extractText(data) || "Created" }] };
+    },
+
+    renderCall(args, theme) {
+      return new Text(theme.fg("toolTitle", theme.bold("➕ Create")), 0, 0);
+    },
+
+    renderResult(result, _options, theme) {
+      const text = (result.content?.[0] as any)?.text ?? "";
+      return new Text(theme.fg("success", text.slice(0, 100)), 0, 0);
+    },
+  });
+
+  pi.registerTool({
+    name: "noc_update",
+    label: "Update Memory",
+    description:
+      "Update existing memory. Supports full content replace, old_string/new_string patch, or append. " +
+      "Must noc_read the URI first. Optional relation marks knowledge evolution: replace|enrich|confirm|challenge.",
+    parameters: Type.Object({
+      uri: Type.String({ description: "Memory URI to update" }),
+      content: Type.Optional(Type.String({ description: "Full replacement content" })),
+      old_string: Type.Optional(Type.String({ description: "Exact text to replace (patch)" })),
+      new_string: Type.Optional(Type.String({ description: "Replacement text (patch)" })),
+      append: Type.Optional(Type.String({ description: "Text to append" })),
+      priority: Type.Optional(Type.Number({ description: "New priority (lower = more important)" })),
+      disclosure: Type.Optional(Type.String({ description: "New disclosure condition" })),
+      expires_at: Type.Optional(Type.String({ description: 'ISO datetime to expire, or "" to clear' })),
+      relation: Type.Optional(
+        Type.String({ description: "Knowledge-evolution relation: replace|enrich|confirm|challenge" }),
+      ),
+    }),
+
+    async execute(_toolCallId, params) {
+      const args: Record<string, unknown> = { uri: params.uri };
+      if (params.content !== undefined) args.content = params.content;
+      if (params.old_string) args.old_string = params.old_string;
+      if (params.new_string !== undefined) args.new_string = params.new_string;
+      if (params.append) args.append = params.append;
+      if (params.priority !== undefined) args.priority = params.priority;
+      if (params.disclosure) args.disclosure = params.disclosure;
+      if (params.expires_at !== undefined) args.expires_at = params.expires_at;
+      if (params.relation) args.relation = params.relation;
+
+      const data = await callMCP("tools/call", { name: MCP_TOOLS.update, arguments: args });
+      return { content: [{ type: "text", text: extractText(data) || "Updated" }] };
+    },
+
+    renderCall(args, theme) {
+      return new Text(theme.fg("toolTitle", theme.bold("✏️ Update")), 0, 0);
+    },
+
+    renderResult(result, _options, theme) {
+      const text = (result.content?.[0] as any)?.text ?? "";
+      return new Text(theme.fg("success", text.slice(0, 100)), 0, 0);
+    },
+  });
+
+  pi.registerTool({
+    name: "noc_delete",
+    label: "Delete Memory",
+    description:
+      "Delete a memory by URI (cuts its path). Always noc_read the full node first. " +
+      "If the node has children, the server may return orphans to handle first.",
+    parameters: Type.Object({
+      uri: Type.String({ description: "Memory URI to delete" }),
+    }),
+
+    async execute(_toolCallId, params) {
+      const data = await callMCP("tools/call", {
+        name: MCP_TOOLS.delete,
+        arguments: { uri: params.uri },
+      });
+      return { content: [{ type: "text", text: extractText(data) || "Deleted" }] };
+    },
+
+    renderCall(args, theme) {
+      return new Text(theme.fg("toolTitle", theme.bold("🗑️ Delete ")) + theme.fg("accent", (args.uri as string) ?? ""), 0, 0);
+    },
+
+    renderResult(result, _options, theme) {
+      const text = (result.content?.[0] as any)?.text ?? "";
+      return new Text(theme.fg("success", text.slice(0, 100)), 0, 0);
+    },
+  });
+}
