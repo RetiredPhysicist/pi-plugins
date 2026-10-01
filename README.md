@@ -8,6 +8,7 @@ Each package keeps its own npm name, version, and release cadence:
 | --- | --- |
 | `pi-all-search` | `npm:pi-all-search` |
 | `pi-all-tools` | `npm:pi-all-tools` |
+| `pi-all-notification` | `npm:pi-all-notification` |
 | `pi-atuin` | `npm:pi-atuin` |
 | `pi-cloudflare-browser-run` | `npm:pi-cloudflare-browser-run` |
 | `pi-codebuddy-sdk` | `npm:pi-codebuddy-sdk` |
