@@ -1,10 +1,14 @@
 {
   "name": "pi-all-search",
-  "version": "1.1.11",
-  "description": "All-in-one web search extension for Pi — exa, tavily, anysearch, tinyfish, firecrawl, context7",
+  "version": "1.1.12",
+  "description": "All-in-one web search extension for Pi \u2014 exa, tavily, anysearch, tinyfish, firecrawl, context7",
   "license": "MIT",
   "type": "module",
-  "repository": "github:RetiredPhysicist/pi-plugins",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RetiredPhysicist/pi-plugins.git",
+    "directory": "packages/pi-all-search"
+  },
   "keywords": [
     "pi-package",
     "pi",

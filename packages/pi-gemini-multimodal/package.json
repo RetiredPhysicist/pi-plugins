@@ -1,10 +1,14 @@
 {
   "name": "pi-gemini-multimodal",
-  "version": "0.1.13",
-  "description": "Multimodal perception for Pi — image/audio/video/document understanding, transcription & image generation via Gemini (gemini_api or local antigravity CLI).",
+  "version": "0.1.14",
+  "description": "Multimodal perception for Pi \u2014 image/audio/video/document understanding, transcription & image generation via Gemini (gemini_api or local antigravity CLI).",
   "license": "MIT",
   "type": "module",
-  "repository": "github:RetiredPhysicist/pi-plugins",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RetiredPhysicist/pi-plugins.git",
+    "directory": "packages/pi-gemini-multimodal"
+  },
   "keywords": [
     "pi-package",
     "pi",
