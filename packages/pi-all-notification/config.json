@@ -1,0 +1,26 @@
+{
+  "channels": {
+    "macos": { "enabled": true },
+    "bark": {
+      "enabled": false,
+      "key": "",
+      "server": "https://api.day.app",
+      "sound": "calypso",
+      "group": "pi",
+      "level": "active",
+      "isArchive": 1
+    },
+    "webhook": {
+      "enabled": false,
+      "url": "",
+      "method": "POST",
+      "headers": { "Content-Type": "application/json" },
+      "bodyTemplate": "{\"title\":\"{{title}}\",\"message\":\"{{message}}\",\"project\":\"{{project}}\",\"timestamp\":\"{{timestamp}}\"}"
+    }
+  },
+  "triggers": {
+    "agent_end": true,
+    "agent_start": false,
+    "tool_error": false
+  }
+}
