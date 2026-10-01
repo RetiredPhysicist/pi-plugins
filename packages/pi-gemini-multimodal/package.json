@@ -4,7 +4,7 @@
   "description": "Multimodal perception for Pi — image/audio/video/document understanding, transcription & image generation via Gemini (gemini_api or local antigravity CLI).",
   "license": "MIT",
   "type": "module",
-  "repository": "github:RealAlexandreAI/pi-gemini-multimodal",
+  "repository": "github:RetiredPhysicist/pi-plugins",
   "keywords": [
     "pi-package",
     "pi",

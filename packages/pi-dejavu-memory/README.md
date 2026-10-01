@@ -9,7 +9,7 @@
 
 **DejaVu extension for Pi — automated memory management with SessionStart boot protocol.**
 
-Agent-side companion to [DejaVu](https://github.com/RealAlexandreAI/DejaVu) (the Cloudflare-hosted MCP memory server). Also available for dsh: [dsh-dejavu-memory](https://github.com/RealAlexandreAI/dsh-dejavu-memory).
+Agent-side companion to [DejaVu](https://github.com/RealAlexandreAI/DejaVu) (the Cloudflare-hosted MCP memory server). Also available for dsh: [dsh-dejavu-memory](https://github.com/RetiredPhysicist/dsh-plugins/tree/main/packages/dsh-dejavu-memory).
 
 ## Features
 
@@ -72,5 +72,5 @@ MIT
 ## Related
 
 - [DejaVu](https://github.com/RealAlexandreAI/DejaVu) — the MCP memory server this extension talks to
-- [dsh-dejavu-memory](https://github.com/RealAlexandreAI/dsh-dejavu-memory) — same memory tools for dsh
+- [dsh-dejavu-memory](https://github.com/RetiredPhysicist/dsh-plugins/tree/main/packages/dsh-dejavu-memory) — same memory tools for dsh
 - [nocturne_memory](https://github.com/Dataojitori/nocturne_memory) — upstream project
