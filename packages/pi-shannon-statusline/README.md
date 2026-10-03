@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/pi-shannon-statusline"><img src="https://img.shields.io/npm/v/pi-shannon-statusline" alt="npm version" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/npm/l/pi-shannon-statusline" alt="MIT license" /></a>
-  <a href="https://github.com/RealAlexandreAI/shannon-statusline"><img src="https://img.shields.io/badge/companion-Claude_Code-8A2BE2" alt="Claude Code companion" /></a>
+  <a href="https://github.com/RetiredPhysicist/cc-plugins"><img src="https://img.shields.io/badge/companion-Claude_Code-8A2BE2" alt="Claude Code companion" /></a>
 </p>
 
 ## Install
