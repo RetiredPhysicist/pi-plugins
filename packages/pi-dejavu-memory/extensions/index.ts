@@ -73,6 +73,24 @@ function isMissingSession(parsed: any): boolean {
   return code === -32600 || message.includes("session");
 }
 
+/** A non-2xx sessionless reply that is really "this server needs a session". */
+function demandsSession(body: string): boolean {
+  let parsed: any = parseStreamResponse(body);
+  if (!parsed) {
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      parsed = null;
+    }
+  }
+  if (parsed && isMissingSession(parsed)) return true;
+  return body.toLowerCase().includes("session");
+}
+
+function httpError(status: number, body: string): any {
+  return { error: { code: status, message: `HTTP ${status}: ${body.slice(0, 200)}` } };
+}
+
 async function initializeSession(): Promise<string | null> {
   const resp = await fetch(MCP_URL, {
     method: "POST",
@@ -127,6 +145,10 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
         return parsed;
       }
       // Legacy server demands a session — fall through to handshake.
+    } else {
+      const body = await resp.text().catch(() => "");
+      if (!demandsSession(body)) return httpError(resp.status, body);
+      // Legacy server rejected the sessionless call — fall through to handshake.
     }
   }
 
@@ -152,7 +174,7 @@ async function callMCP(method: string, params: Record<string, unknown>): Promise
 
   if (!resp.ok) {
     const body = await resp.text().catch(() => "<unreadable>");
-    return { error: { code: resp.status, message: `HTTP ${resp.status}: ${body.slice(0, 200)}` } };
+    return httpError(resp.status, body);
   }
 
   // Check for new session ID in response
@@ -211,12 +233,24 @@ export function isToolError(data: any): boolean {
   return data?.result?.isError === true;
 }
 
+/** Stable text for a JSON-RPC / transport error: `MCP error <code>: <message>`. */
+export function protocolErrorText(error: any): string {
+  const message = typeof error?.message === "string" ? error.message : JSON.stringify(error);
+  return `MCP error ${error?.code ?? "unknown"}: ${message}`;
+}
+
+export const UNPARSABLE_RESPONSE = "MCP error: empty or unparsable response from server";
+
 /**
- * Text of a tools/call result. A result with `isError: true` is thrown so Pi
- * reports a failed tool call carrying the server's text verbatim
- * (e.g. "Not stored: …").
+ * Text of a tools/call result. Every failure is thrown so Pi reports a failed
+ * tool call with the server's text:
+ * - `result.isError: true` → the tool's text verbatim (e.g. "Not stored: …");
+ * - JSON-RPC `error` (or non-2xx HTTP) → `MCP error <code>: <message>`;
+ * - no parsable JSON-RPC response → UNPARSABLE_RESPONSE.
  */
 export function toolResultText(data: any, fallback: string): string {
+  if (data?.error) throw new Error(protocolErrorText(data.error));
+  if (!data || typeof data !== "object" || data.result == null) throw new Error(UNPARSABLE_RESPONSE);
   const text = extractText(data);
   if (isToolError(data)) throw new Error(text || "DejaVu tool call failed");
   return text || fallback;
@@ -243,13 +277,8 @@ export default function (pi: ExtensionAPI): void {
       for (const uri of BOOT_URIS) {
         try {
           const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri } });
-          if (isToolError(data)) {
-            errors.push(`${uri}: ${extractText(data) || "failed"}`);
-          } else if (data?.result?.content?.[0]?.text) {
-            results.push(`=== ${uri} ===\n${data.result.content[0].text}`);
-          } else if (data?.error) {
-            errors.push(`${uri}: ${data.error.message}`);
-          }
+          const text = toolResultText(data, "");
+          if (text) results.push(`=== ${uri} ===\n${text}`);
         } catch (err) {
           errors.push(`${uri}: ${err instanceof Error ? err.message : String(err)}`);
         }
@@ -263,9 +292,8 @@ export default function (pi: ExtensionAPI): void {
       // Best-effort — if the server doesn't implement it, boot still succeeds.
       try {
         const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri: "system://briefing" } });
-        if (!isToolError(data) && data?.result?.content?.[0]?.text) {
-          results.push(`=== system://briefing ===\n${data.result.content[0].text}`);
-        }
+        const text = toolResultText(data, "");
+        if (text) results.push(`=== system://briefing ===\n${text}`);
       } catch {
         // ignore — briefing is optional
       }
