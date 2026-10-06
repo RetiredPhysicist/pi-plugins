@@ -225,12 +225,24 @@ export function extractText(data: any): string {
   if (data?.error) {
     return `Error: ${data.error.message ?? JSON.stringify(data.error)}`;
   }
-  return data?.result?.content?.[0]?.text ?? "";
+  // Every text item, in order (a tool may return several, and not always text first).
+  const content = data?.result?.content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .filter((c: any) => c?.type === "text" && typeof c.text === "string")
+    .map((c: any) => c.text as string)
+    .join("\n");
 }
 
-/** True when the MCP server reported the tool call itself as failed (`result.isError`). */
+/**
+ * True when the MCP server reported the tool call itself as failed. Any truthy
+ * `result.isError` counts (servers send true, "true" or 1), except the strings
+ * "false" / "0".
+ */
 export function isToolError(data: any): boolean {
-  return data?.result?.isError === true;
+  const v = data?.result?.isError;
+  if (typeof v === "string") return v.trim() !== "" && !["false", "0"].includes(v.trim().toLowerCase());
+  return Boolean(v);
 }
 
 /** Stable text for a JSON-RPC / transport error: `MCP error <code>: <message>`. */
@@ -284,8 +296,9 @@ export default function (pi: ExtensionAPI): void {
         }
       }
 
+      // Nothing loaded: a failed tool call, not a success-shaped error.
       if (results.length === 0 && errors.length > 0) {
-        return { content: [{ type: "text", text: `❌ ${errors.join("\n")}` }], details: { error: errors.join("\n") } };
+        throw new Error(`Boot failed — no boot memory could be read:\n${errors.join("\n")}`);
       }
 
       // Daily working-memory briefing: recent activity, expiring, cold candidates.
@@ -298,16 +311,22 @@ export default function (pi: ExtensionAPI): void {
         // ignore — briefing is optional
       }
 
-      return { content: [{ type: "text", text: results.join("\n\n---\n\n") }], details: { booted: results.length } };
+      // Partial boot: say which reads failed so the agent knows its context is incomplete.
+      const warning = errors.length ? `\n\n---\n\n⚠ Boot incomplete — failed reads:\n${errors.map((e) => `- ${e}`).join("\n")}` : "";
+      return {
+        content: [{ type: "text", text: results.join("\n\n---\n\n") + warning }],
+        details: { booted: results.length, ...(errors.length ? { failed: errors } : {}) },
+      };
     },
 
     renderCall(_args, theme) {
       return new Text(theme.fg("toolTitle", theme.bold("🌙 Boot")), 0, 0);
     },
 
-    renderResult(result, _options, theme) {
-      const d = result.details as { error?: string; booted?: number } | undefined;
-      if (d?.error) return new Text(theme.fg("error", "❌ Boot failed"), 0, 0);
+    renderResult(result, _options, theme, context) {
+      const d = result.details as { booted?: number; failed?: string[] } | undefined;
+      if (context?.isError) return new Text(theme.fg("error", "❌ Boot failed"), 0, 0);
+      if (d?.failed?.length) return new Text(theme.fg("warning", `⚠ ${d.booted ?? 0} nodes loaded, ${d.failed.length} failed`), 0, 0);
       return new Text(theme.fg("success", `✓ ${d?.booted ?? 0} nodes loaded`), 0, 0);
     },
   });
