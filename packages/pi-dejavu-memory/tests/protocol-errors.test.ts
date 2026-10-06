@@ -81,25 +81,32 @@ for (const [tool, params, mcpName] of wrappers) {
 }
 
 describe("noc_boot", () => {
-  test("protocol failures are errored reads; all failing → boot error", async () => {
+  test("protocol failures are errored reads; all failing → failed tool call", async () => {
     replies = [rpcError(-32603, "Internal error"), http(502, "bad gateway"), garbage];
-    const r = await run("noc_boot", {});
-    assert.equal(
-      r.details.error,
-      [
-        "system://boot: MCP error -32603: Internal error",
-        "system://recent/5: MCP error 502: HTTP 502: bad gateway",
-        "system://triggers: MCP error: empty or unparsable response from server",
-      ].join("\n"),
-    );
-    assert.ok(r.content[0].text.startsWith("❌"));
+    await assert.rejects(run("noc_boot", {}), (err: Error) => {
+      assert.equal(
+        err.message,
+        [
+          "Boot failed — no boot memory could be read:",
+          "system://boot: MCP error -32603: Internal error",
+          "system://recent/5: MCP error 502: HTTP 502: bad gateway",
+          "system://triggers: MCP error: empty or unparsable response from server",
+        ].join("\n"),
+      );
+      return true;
+    });
   });
 
-  test("a protocol failure is never loaded as a node; failed briefing is skipped", async () => {
+  test("a protocol failure is never loaded as a node but is listed; failed briefing is skipped", async () => {
     replies = [ok("BOOT"), rpcError(-32603, "Internal error"), ok("TRIG"), http(500, "briefing down")];
     const r = await run("noc_boot", {});
     assert.equal(r.details.booted, 2);
-    assert.equal(r.content[0].text, "=== system://boot ===\nBOOT\n\n---\n\n=== system://triggers ===\nTRIG");
+    assert.equal(
+      r.content[0].text,
+      "=== system://boot ===\nBOOT\n\n---\n\n=== system://triggers ===\nTRIG" +
+        "\n\n---\n\n⚠ Boot incomplete — failed reads:\n- system://recent/5: MCP error -32603: Internal error",
+    );
+    assert.deepEqual(r.details.failed, ["system://recent/5: MCP error -32603: Internal error"]);
   });
 
   test("garbage briefing is skipped too", async () => {

@@ -86,14 +86,13 @@ describe("other wrappers treat isError as failure too", () => {
 
   test("noc_boot: an isError read is reported as an error, not loaded as a node", async () => {
     nextResults = [failed("boot exploded"), failed("recent exploded"), failed("triggers exploded")];
-    const r = await run("noc_boot", {});
-    assert.match(r.details.error, /system:\/\/boot: boot exploded/);
-    assert.ok(r.content[0].text.startsWith("❌"));
+    await assert.rejects(run("noc_boot", {}), (err: Error) => /system:\/\/boot: boot exploded/.test(err.message));
 
     nextResults = [ok("BOOT"), failed("recent exploded"), ok("TRIG"), failed("no briefing")];
     const r2 = await run("noc_boot", {});
     assert.equal(r2.details.booted, 2);
-    assert.ok(!r2.content[0].text.includes("exploded"));
+    assert.ok(!r2.content[0].text.includes("=== system://recent/5 ==="));
+    assert.ok(r2.content[0].text.includes("- system://recent/5: recent exploded"));
     assert.ok(!r2.content[0].text.includes("no briefing"));
   });
 });
