@@ -68,9 +68,9 @@ describe("parseStreamResponse", () => {
 });
 
 describe("extractText", () => {
-  test("extracts first content text", () => {
-    const data = { result: { content: [{ type: "text", text: "hello" }, { type: "text", text: "ignored" }] } };
-    assert.equal(extractText(data), "hello");
+  test("joins every text content item in order", () => {
+    const data = { result: { content: [{ type: "text", text: "hello" }, { type: "text", text: "world" }] } };
+    assert.equal(extractText(data), "hello\nworld");
   });
 
   test("formats error with message", () => {
