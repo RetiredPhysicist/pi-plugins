@@ -206,6 +206,22 @@ export function extractText(data: any): string {
   return data?.result?.content?.[0]?.text ?? "";
 }
 
+/** True when the MCP server reported the tool call itself as failed (`result.isError`). */
+export function isToolError(data: any): boolean {
+  return data?.result?.isError === true;
+}
+
+/**
+ * Text of a tools/call result. A result with `isError: true` is thrown so Pi
+ * reports a failed tool call carrying the server's text verbatim
+ * (e.g. "Not stored: …").
+ */
+export function toolResultText(data: any, fallback: string): string {
+  const text = extractText(data);
+  if (isToolError(data)) throw new Error(text || "DejaVu tool call failed");
+  return text || fallback;
+}
+
 export default function (pi: ExtensionAPI): void {
   pi.registerTool({
     name: "noc_boot",
@@ -227,7 +243,9 @@ export default function (pi: ExtensionAPI): void {
       for (const uri of BOOT_URIS) {
         try {
           const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri } });
-          if (data?.result?.content?.[0]?.text) {
+          if (isToolError(data)) {
+            errors.push(`${uri}: ${extractText(data) || "failed"}`);
+          } else if (data?.result?.content?.[0]?.text) {
             results.push(`=== ${uri} ===\n${data.result.content[0].text}`);
           } else if (data?.error) {
             errors.push(`${uri}: ${data.error.message}`);
@@ -245,7 +263,7 @@ export default function (pi: ExtensionAPI): void {
       // Best-effort — if the server doesn't implement it, boot still succeeds.
       try {
         const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri: "system://briefing" } });
-        if (data?.result?.content?.[0]?.text) {
+        if (!isToolError(data) && data?.result?.content?.[0]?.text) {
           results.push(`=== system://briefing ===\n${data.result.content[0].text}`);
         }
       } catch {
@@ -276,16 +294,16 @@ export default function (pi: ExtensionAPI): void {
 
     async execute(_toolCallId, params) {
       const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri: params.uri } });
-      const text = extractText(data);
-      return { content: [{ type: "text", text: text || "No content" }] };
+      return { content: [{ type: "text", text: toolResultText(data, "No content") }] };
     },
 
     renderCall(args, theme) {
       return new Text(theme.fg("toolTitle", theme.bold("📖 ")) + theme.fg("accent", (args.uri as string) ?? ""), 0, 0);
     },
 
-    renderResult(result, _options, theme) {
+    renderResult(result, _options, theme, context) {
       const text = (result.content?.[0] as any)?.text ?? "";
+      if (context?.isError) return new Text(theme.fg("error", `❌ ${text.slice(0, 100)}`), 0, 0);
       return new Text(theme.fg("success", `✓ ${text.length} chars`), 0, 0);
     },
   });
@@ -306,15 +324,16 @@ export default function (pi: ExtensionAPI): void {
       if (params.limit !== undefined) args.limit = params.limit;
       if (params.domain) args.domain = params.domain;
       const data = await callMCP("tools/call", { name: MCP_TOOLS.search, arguments: args });
-      return { content: [{ type: "text", text: extractText(data) || "No results" }] };
+      return { content: [{ type: "text", text: toolResultText(data, "No results") }] };
     },
 
     renderCall(args, theme) {
       return new Text(theme.fg("toolTitle", theme.bold("🔍 ")) + theme.fg("accent", (args.query as string) ?? ""), 0, 0);
     },
 
-    renderResult(result, _options, theme) {
+    renderResult(result, _options, theme, context) {
       const text = (result.content?.[0] as any)?.text ?? "";
+      if (context?.isError) return new Text(theme.fg("error", `❌ ${text.slice(0, 100)}`), 0, 0);
       const lines = text.split("\n").filter(Boolean).length;
       return new Text(theme.fg("success", `✓ ${lines} results`), 0, 0);
     },
@@ -343,15 +362,16 @@ export default function (pi: ExtensionAPI): void {
           ...(params.title ? { title: params.title } : {}),
         },
       });
-      return { content: [{ type: "text", text: extractText(data) || "Created" }] };
+      return { content: [{ type: "text", text: toolResultText(data, "Created") }] };
     },
 
     renderCall(args, theme) {
       return new Text(theme.fg("toolTitle", theme.bold("➕ Create")), 0, 0);
     },
 
-    renderResult(result, _options, theme) {
+    renderResult(result, _options, theme, context) {
       const text = (result.content?.[0] as any)?.text ?? "";
+      if (context?.isError) return new Text(theme.fg("error", `❌ ${text.slice(0, 100)}`), 0, 0);
       return new Text(theme.fg("success", text.slice(0, 100)), 0, 0);
     },
   });
@@ -388,15 +408,16 @@ export default function (pi: ExtensionAPI): void {
       if (params.relation) args.relation = params.relation;
 
       const data = await callMCP("tools/call", { name: MCP_TOOLS.update, arguments: args });
-      return { content: [{ type: "text", text: extractText(data) || "Updated" }] };
+      return { content: [{ type: "text", text: toolResultText(data, "Updated") }] };
     },
 
     renderCall(args, theme) {
       return new Text(theme.fg("toolTitle", theme.bold("✏️ Update")), 0, 0);
     },
 
-    renderResult(result, _options, theme) {
+    renderResult(result, _options, theme, context) {
       const text = (result.content?.[0] as any)?.text ?? "";
+      if (context?.isError) return new Text(theme.fg("error", `❌ ${text.slice(0, 100)}`), 0, 0);
       return new Text(theme.fg("success", text.slice(0, 100)), 0, 0);
     },
   });
@@ -416,15 +437,16 @@ export default function (pi: ExtensionAPI): void {
         name: MCP_TOOLS.delete,
         arguments: { uri: params.uri },
       });
-      return { content: [{ type: "text", text: extractText(data) || "Deleted" }] };
+      return { content: [{ type: "text", text: toolResultText(data, "Deleted") }] };
     },
 
     renderCall(args, theme) {
       return new Text(theme.fg("toolTitle", theme.bold("🗑️ Delete ")) + theme.fg("accent", (args.uri as string) ?? ""), 0, 0);
     },
 
-    renderResult(result, _options, theme) {
+    renderResult(result, _options, theme, context) {
       const text = (result.content?.[0] as any)?.text ?? "";
+      if (context?.isError) return new Text(theme.fg("error", `❌ ${text.slice(0, 100)}`), 0, 0);
       return new Text(theme.fg("success", text.slice(0, 100)), 0, 0);
     },
   });
