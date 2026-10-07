@@ -71,17 +71,19 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-      - name: Typecheck
-        working-directory: packages/${{ matrix.package }}
-        run: npm run typecheck --if-present
+      # Independent after install (no shared artifact writes).
+      - parallel:
+          - name: Typecheck
+            working-directory: packages/${{ matrix.package }}
+            run: npm run typecheck --if-present
 
-      - name: Test
-        working-directory: packages/${{ matrix.package }}
-        run: |
-          if npm run | grep -q '^  test:ci$'; then
-            npm run test:ci
-          elif npm run | grep -q '^  test:unit$'; then
-            npm run test:unit
-          else
-            npm test --if-present
-          fi
+          - name: Test
+            working-directory: packages/${{ matrix.package }}
+            run: |
+              if npm run | grep -q '^  test:ci$'; then
+                npm run test:ci
+              elif npm run | grep -q '^  test:unit$'; then
+                npm run test:unit
+              else
+                npm test --if-present
+              fi
