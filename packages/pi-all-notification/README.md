@@ -118,3 +118,5 @@ Webhook 支持 GET 和 POST，Body 模板支持变量替换：
 ## License
 
 MIT
+
+<!-- ci-parallel bench 2026-10-07T08:32:49+08:00 -->

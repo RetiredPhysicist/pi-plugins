@@ -94,3 +94,5 @@ MIT
 ---
 
 Built for [Pi Coding Agent](https://github.com/earendil-works/pi-coding-agent). Inspired by [atuin](https://github.com/atuinsh/atuin).
+
+<!-- ci-parallel bench 2026-10-07T08:32:49+08:00 -->
