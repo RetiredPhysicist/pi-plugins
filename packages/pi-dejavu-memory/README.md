@@ -74,5 +74,3 @@ MIT
 - [DejaVu](https://github.com/RealAlexandreAI/DejaVu) — the MCP memory server this extension talks to
 - [dsh-dejavu-memory](https://github.com/RetiredPhysicist/dsh-plugins/tree/main/packages/dsh-dejavu-memory) — same memory tools for dsh
 - [nocturne_memory](https://github.com/Dataojitori/nocturne_memory) — upstream project
-
-<!-- ci-parallel bench 2026-10-07T08:32:50+08:00 -->

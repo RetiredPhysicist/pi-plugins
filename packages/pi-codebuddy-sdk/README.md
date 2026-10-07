@@ -153,5 +153,3 @@ MIT
 ## Inspiration
 
 Early MCP bridge patterns were inspired by [pi-claude-bridge](https://github.com/elidickinson/pi-claude-bridge). This package is a separate codebase on [@tencent-ai/agent-sdk](https://www.npmjs.com/package/@tencent-ai/agent-sdk).
-
-<!-- ci-parallel bench 2026-10-07T08:32:50+08:00 -->

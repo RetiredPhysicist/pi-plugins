@@ -107,5 +107,3 @@ npm test
 ## License
 
 MIT
-
-<!-- ci-parallel bench 2026-10-07T08:32:50+08:00 -->

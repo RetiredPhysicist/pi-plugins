@@ -74,5 +74,3 @@ Every provider is optional. With no keys at all, keyless Firecrawl still answers
 ## License
 
 MIT
-
-<!-- ci-parallel bench 2026-10-07T08:32:49+08:00 -->
