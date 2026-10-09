@@ -42,7 +42,25 @@ The extension renders below the editor:
 ↻ bash: src/index.ts (3s)
 ─────────────────────────────────────────────────────────────
 ↻ agent (3s)  │  ✔ agent ×2
+✔ done
 ```
+
+### Run state
+
+The last line mirrors Pi's own program status (the one Pi reports to the
+terminal over OSC 7501), so the HUD and the terminal agree:
+
+| State | When |
+|---|---|
+| `◦ idle` | nothing is running |
+| `↻ working` | a run or a compaction is in progress |
+| `⧗ waiting for user` | a dialog or login is waiting on you, with its title |
+| `✔ done` | one run finished |
+| `✘ error` | the run ended on an error |
+
+`done` means one run finished and nothing further will happen automatically. It
+is **not** a judgement about the work: it does not mean tests passed or the
+result was accepted. A run you cancel reports `idle`, not `done`.
 
 ## Configuration
 

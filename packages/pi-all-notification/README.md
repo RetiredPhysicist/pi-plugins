@@ -22,7 +22,9 @@ pi install npm:pi-all-notification
 
 ### Agent 自动触发
 
-Agent 完成响应时自动通知（`agent_end` 事件）。可在设置面板 toggle 触发时机。
+一轮运行**最终结束**时自动通知（Pi 的 `agent_settled` 事件）。自然结束发 `✅ Complete`，被用户取消发 `⏹ Cancelled`，两者不会混为一谈。可在设置面板 toggle 触发时机。
+
+> 用的是 `agent_settled` 而不是 `agent_end`：`agent_end` 之后还可能跟着重试、压缩恢复或排队的消息，在那里发通知既可能过早，也无法区分「完成」和「被取消」。
 
 ### Agent 手动调用
 
@@ -105,7 +107,7 @@ Webhook 支持 GET 和 POST，Body 模板支持变量替换：
 
 | 事件 | 默认 | 说明 |
 |------|------|------|
-| `agent_end` | ✅ | Agent 完成响应，等待输入 |
+| `agent_end` | ✅ | 一轮运行结束（自然完成 `✅` 或被取消 `⏹`） |
 | `agent_start` | ⬜ | Agent 开始处理 |
 | `tool_error` | ⬜ | 工具执行出错 |
 
