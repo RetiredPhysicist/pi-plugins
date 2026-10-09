@@ -16,6 +16,13 @@ import {
   recordThroughputDelta,
   startAssistantStream,
 } from "./throughput.ts";
+import {
+  describeRunState,
+  initialSnapshot,
+  resolveRunState,
+  type RunState,
+  type RunStateSnapshot,
+} from "./run-state.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -60,6 +67,12 @@ let modelProvider = "";
 let modelId = "";
 let cwd = "";
 let waitingPrompt: { kind: string; title?: string } | null = null;
+/**
+ * The run state machine, mirroring Pi's OSC 7501 reporter. Kept in one object so
+ * the HUD and the tests read exactly the reporter's rules.
+ */
+let runState: RunStateSnapshot = initialSnapshot();
+
 let throughputState = createThroughputState();
 let hudRefreshTimer: ReturnType<typeof setTimeout> | undefined;
 let hudRefreshContext: any;
@@ -509,12 +522,33 @@ async function buildHud(ctx: any, config: ShannonConfig): Promise<string[]> {
     lines.push(`${c(I_RUN, YELLOW)} ${c(t.name, CYAN)}${target} ${c(`(${elapsed})`, COMMENT)}`);
   }
 
-  // ── Waiting on a blocking user-facing UI prompt ──
-  if (waitingPrompt) {
-    const title = waitingPrompt.title
-      ? ` ${c(waitingPrompt.title.length > 40 ? `${waitingPrompt.title.slice(0, 39)}…` : waitingPrompt.title, FG)}`
-      : "";
-    lines.push(`${c(I_WAIT, YELLOW)} ${c("waiting for user", YELLOW)} ${c(`(${waitingPrompt.kind})`, COMMENT)}${title}`);
+  // ── Run state, mirroring Pi's own program status ──
+  // `done` here means one run finished; it says nothing about acceptance.
+  const state: RunState = resolveRunState({
+    ...runState,
+    blocked: waitingPrompt !== null,
+    blockedKind: waitingPrompt?.kind,
+    blockedTitle: waitingPrompt?.title,
+  });
+  const described = describeRunState(state);
+  if (state !== "idle") {
+    const tone =
+      described.tone === "error" ? PINK
+        : described.tone === "done" ? GREEN
+          : described.tone === "busy" ? YELLOW
+            : described.tone === "blocked" ? YELLOW
+              : COMMENT;
+    let line = `${c(described.icon, tone)} ${c(described.label, tone)}`;
+    if (state === "blocked" && waitingPrompt) {
+      if (waitingPrompt.kind) line += ` ${c(`(${waitingPrompt.kind})`, COMMENT)}`;
+      if (waitingPrompt.title) {
+        const title = waitingPrompt.title.length > 40
+          ? `${waitingPrompt.title.slice(0, 39)}…`
+          : waitingPrompt.title;
+        line += ` ${c(title, FG)}`;
+      }
+    }
+    lines.push(line);
   }
 
   // ── Matrix rain (configurable via ~/.pi/agent/shannon-statusline.json) ──
@@ -574,6 +608,7 @@ export default function (pi: ExtensionAPI) {
     cwd = ctx.cwd;
     tools = [];
     waitingPrompt = null;
+    runState = initialSnapshot();
     throughputState = createThroughputState();
     // Pi resets extension UI before a new session starts.
     footerVisible = true;
@@ -612,6 +647,12 @@ export default function (pi: ExtensionAPI) {
   pi.on("message_end", (event, ctx) => {
     if (event.message.role !== "assistant") return;
     finishAssistantStream(throughputState, event.message.usage);
+    // The latest assistant response decides the run's outcome, so a retried
+    // error is replaced by its successful retry.
+    runState = {
+      ...runState,
+      outcome: (event.message as { stopReason?: string }).stopReason === "error" ? "error" : "done",
+    };
     refreshHud(ctx);
   });
 
@@ -650,7 +691,8 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("turn_end", (_event, ctx) => refreshHud(ctx));
   pi.on("agent_end", (_event, ctx) => {
-    // Mark the most recently started running agent as completed
+    // `agent_end` is not final: retries, recovery, compaction and queued work can
+    // still follow, so it marks activity but not settlement.
     const running = agents.find(a => a.status === "running");
     if (running) {
       running.status = "completed";
@@ -660,6 +702,51 @@ export default function (pi: ExtensionAPI) {
   });
   pi.on("agent_start", (_event, ctx) => {
     agents.push({ status: "running", startTime: Date.now() });
+    // A new run clears the previous run's outcome and becomes active.
+    runState = { ...runState, active: true, compacting: false, outcome: "done" };
+    refreshHud(ctx);
+  });
+
+  // `agent_settled` is Pi's final boundary: nothing will continue automatically,
+  // and `aborted` says whether the person cancelled the run.
+  pi.on("agent_settled", (event, ctx) => {
+    const aborted = (event as { aborted?: boolean }).aborted === true;
+    // End the run and lock in its outcome: the reporter's `resting` is the
+    // aborted run's `idle`, otherwise the outcome the responses produced.
+    runState = {
+      ...runState,
+      active: false,
+      compacting: false,
+      resting: aborted ? "idle" : runState.outcome,
+    };
+    refreshHud(ctx);
+  });
+
+  // Compaction reports `working` with its own message; a failed recovery can end
+  // the run, so the outcome is updated the same way the reporter does it.
+  pi.on("session_before_compact", (_event, ctx) => {
+    runState = { ...runState, compacting: true };
+    refreshHud(ctx);
+  });
+
+  pi.on("session_compact", (_event, ctx) => {
+    runState = { ...runState, compacting: false };
+    refreshHud(ctx);
+  });
+
+  pi.on("session_compact_failed", (event, ctx) => {
+    const failed = event as { aborted?: boolean; errorMessage?: string };
+    runState = {
+      ...runState,
+      compacting: false,
+      // A failed compaction while a run is active ends it: aborted is idle,
+      // an error keeps the error outcome.
+      ...(runState.active
+        ? { outcome: failed.aborted ? "idle" : failed.errorMessage ? "error" : runState.outcome }
+        : failed.errorMessage
+          ? { resting: "error" as const }
+          : {}),
+    };
     refreshHud(ctx);
   });
 

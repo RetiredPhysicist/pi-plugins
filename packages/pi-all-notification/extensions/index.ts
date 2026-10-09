@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { execSync } from "node:child_process";
+import { describeTask, settleNotification } from "./settle.ts";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -46,6 +47,10 @@ interface WebhookConfig extends ChannelConfig {
 }
 
 interface TriggerConfig {
+  /**
+   * Notify when a run settles: naturally (`✅ Complete`) or cancelled (`⏹ Cancelled`).
+   * Named `agent_end` for backward compatibility with existing config files.
+   */
   agent_end: boolean;
   agent_start: boolean;
   tool_error: boolean;
@@ -252,6 +257,14 @@ function settingLabel(emoji: string, name: string, enabled: boolean, extra?: str
 
 export default function (pi: ExtensionAPI) {
   let projectName = "";
+  /**
+   * The prompt that started the current run, for the completion notification.
+   *
+   * `agent_settled` carries no messages, so the text is kept from
+   * `before_agent_start` instead; `agent_end` used to read it off
+   * `event.messages`, which `agent_settled` does not have.
+   */
+  let lastTaskDescription: string | null = null;
 
   // ── notify_user agent tool ────────────────────────────
   pi.registerTool({
@@ -681,7 +694,7 @@ export default function (pi: ExtensionAPI) {
     while (true) {
       const t = cfg.triggers;
       const items = [
-        { label: settingLabel("🏁", "agent_end (response complete)", t.agent_end), value: "agent_end" },
+        { label: settingLabel("🏁", "agent_end (run settled: complete or cancelled)", t.agent_end), value: "agent_end" },
         { label: settingLabel("🚀", "agent_start (processing begins)", t.agent_start), value: "agent_start" },
         { label: settingLabel("❌", "tool_error (tool execution error)", t.tool_error), value: "tool_error" },
         { label: "← Back", value: "back" },
@@ -747,6 +760,12 @@ export default function (pi: ExtensionAPI) {
     projectName = ctx.cwd.split(/[/\\]/).pop() || "";
   });
 
+  // Capture the prompt for the completion notification: `agent_settled` carries
+  // no messages, and this is the last point the prompt text is available.
+  pi.on("before_agent_start", (event, _ctx) => {
+    lastTaskDescription = describeTask((event as { prompt?: unknown }).prompt);
+  });
+
   pi.on("agent_start", (_event, ctx) => {
     projectName = ctx.cwd.split(/[/\\]/).pop() || "";
     const cfg = loadConfig();
@@ -762,28 +781,22 @@ export default function (pi: ExtensionAPI) {
     fireAll(cfg, vars);
   });
 
-  pi.on("agent_end", (event, _ctx) => {
+  // `agent_settled` is Pi's final notification boundary and is the only event
+  // that says whether the run was cancelled. `agent_end` fires earlier and can
+  // still be followed by retries, recovery or queued work, so a notification
+  // sent there can be both premature and wrong about how the run finished.
+  pi.on("agent_settled", (event, _ctx) => {
     const cfg = loadConfig();
     if (!cfg.triggers.agent_end) return;
 
-    let taskDesc = projectName;
-    if (event.messages?.length) {
-      for (let i = event.messages.length - 1; i >= 0; i--) {
-        const m = event.messages[i] as any;
-        if (m.role === "user" && m.content) {
-          const raw = typeof m.content === "string" ? m.content.trim() : "";
-          const firstLine = raw.split(/\n/)[0] || "";
-          taskDesc = firstLine.length > 40 ? firstLine.slice(0, 37) + "..." : firstLine;
-          break;
-        }
-      }
-    }
-
+    const decision = settleNotification(
+      event as { aborted?: unknown },
+      projectName,
+      lastTaskDescription,
+    );
     const vars: NotificationVars = {
-      title: "pi ✅ Complete",
-      message: taskDesc,
+      ...decision,
       project: projectName,
-      emoji: "✅",
       timestamp: new Date().toISOString(),
     };
     fireAll(cfg, vars);

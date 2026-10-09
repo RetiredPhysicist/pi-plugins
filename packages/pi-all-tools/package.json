@@ -1,7 +1,8 @@
 {
   "name": "pi-all-tools",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "Enable all 7 built-in Pi tools by default (read, bash, edit, write, grep, find, ls)",
+  "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,5 +19,14 @@
     "extensions": [
       "./extensions"
     ]
+  },
+  "scripts": {
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.1.0"
   }
 }
