@@ -16,6 +16,14 @@ export type PiModel = {
 const DEFAULT_CONTEXT = 131_072;
 const DEFAULT_MAX_TOKENS = 8192;
 
+type SdkModelMeta = {
+	id?: string;
+	name?: string;
+	maxInputTokens?: number;
+	maxOutputTokens?: number;
+	contextWindow?: { supportedLengths?: ReadonlyArray<number>; defaultLength?: number };
+};
+
 function detectThinking(id: string): boolean {
 	return /claude|gemini|gpt-5|hy3|deepseek|glm/i.test(id);
 }
@@ -36,17 +44,28 @@ function estimateMaxTokens(id: string): number {
 	return DEFAULT_MAX_TOKENS;
 }
 
-export function rawModelsFromSdk(supported: Array<ModelInfo & { id?: string; name?: string }>): PiModel[] {
+function positive(value: number | undefined): number | undefined {
+	return value && value > 0 ? value : undefined;
+}
+
+function contextFromMetadata(model: SdkModelMeta): number | undefined {
+	const lengths = model.contextWindow?.supportedLengths?.filter((n) => n > 0) ?? [];
+	return positive(model.maxInputTokens)
+		?? positive(model.contextWindow?.defaultLength)
+		?? (lengths.length ? Math.max(...lengths) : undefined);
+}
+
+export function rawModelsFromSdk(supported: Array<ModelInfo & SdkModelMeta>): PiModel[] {
 	return supported
-		.map((m) => ({ id: m.id ?? m.value, name: m.name ?? m.displayName ?? m.id ?? m.value }))
+		.map((m) => ({ ...m, id: m.id ?? m.value, name: m.name ?? m.displayName ?? m.id ?? m.value }))
 		.filter((m) => m.id)
 		.map((m) => ({
 		id: m.id!,
 		name: m.name || m.id!,
 		reasoning: detectThinking(m.id!),
 		input: detectImages(m.id!) ? ["text", "image"] as const : ["text"] as const,
-		contextWindow: estimateContext(m.id!),
-		maxTokens: estimateMaxTokens(m.id!),
+		contextWindow: contextFromMetadata(m) ?? estimateContext(m.id!),
+		maxTokens: positive(m.maxOutputTokens) ?? estimateMaxTokens(m.id!),
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 	}));
 }

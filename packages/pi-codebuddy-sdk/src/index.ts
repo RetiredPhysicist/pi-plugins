@@ -11,6 +11,8 @@ import { dirname, join } from "path";
 import { PROVIDER_ID, messageContentToText, convertPiMessages } from "./convert.js";
 import { buildModels, codebuddyModelId, FALLBACK_MODELS, rawModelsFromSdk, resolveModel as _resolveModel, type PiModel } from "./models.js";
 import { readModelsCache, writeModelsCache } from "./models-cache.js";
+import { clearOwnedStream, providerRegistration } from "./provider-registration.js";
+import { syncServedWindow } from "./served-window.js";
 import { readTranscript } from "./transcript-compat.js";
 import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, buildCodebuddySystemPrompt } from "./skills.js";
 import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
@@ -174,7 +176,7 @@ function startQuery(args: Parameters<typeof query>[0]): ReturnType<typeof query>
 
 // --- Constants ---
 
-// Global key to prevent re-registration of the provider across module reloads.
+// Global key for the first streamSimple that owns the shared ModelRegistry.
 //
 // Extensions like pi-subagents spawn a subagent and it loads this module
 // again. Without this guard, the subagent's call to registerProvider() would
@@ -182,13 +184,14 @@ function startQuery(args: Parameters<typeof query>[0]): ReturnType<typeof query>
 // ModelRegistry. When the parent later delivers a tool result, it would call
 // the subagent's `streamSimple` (which has empty state) instead of its own.
 //
-// By storing the active streamSimple in a Symbol.for() global (shared across all
-// module instances), we ensure only the FIRST instance to register takes effect.
-// Subsequent instances wrap the stored function instead of overwriting it.
+// The first instance stores its streamSimple in a Symbol.for() global, keyed
+// by the ModelRegistry seen at session start. The same registry reuses that
+// stream. A different registry still registers, with its own stream, because
+// a host such as pi-web gives each session its own ModelRuntime.
 //
 // On session_shutdown (including /reload), clearSession() resets this so a fresh
 // registration can occur for the next session.
-const ACTIVE_STREAM_SIMPLE_KEY = Symbol.for("codebuddy-sdk:activeStreamSimple");
+const PROVIDER_NAME = "CodeBuddy";
 
 const SDK_TO_PI_TOOL_NAME: Record<string, string> = {
 	read: "read", write: "write", edit: "edit", bash: "bash",
@@ -204,6 +207,22 @@ type SettingSource = "user" | "project" | "local";
 
 function resolveModel(input: string) {
 	return _resolveModel(MODELS, input);
+}
+
+function registerCodebuddyProvider(pi: ExtensionAPI, globals: Record<symbol, any> = globalThis as Record<symbol, any>): void {
+	const { streamFn, claimStream } = providerRegistration(globals, streamCodebuddySdk, boundRuntime);
+	pi.registerProvider(PROVIDER_ID, {
+		name: PROVIDER_NAME,
+		baseUrl: PROVIDER_ID,
+		apiKey: "not-used",
+		api: "codebuddy-sdk",
+		models: MODELS as any,
+		// Cast: pi-ai AssistantMessageEventStream diamond dep between pi-coding-agent and pi-agent-core
+		streamSimple: streamFn as any,
+	});
+	if (!claimStream) {
+		debug(`provider: reusing parent streamSimple (module=${moduleInstanceId})`);
+	}
 }
 
 // --- Error handling ---
@@ -461,7 +480,7 @@ async function runIsolatedSummary(
 					if (block.type === "text" && typeof block.text === "string") assistantText += block.text;
 				}
 			} else if (message.type === "result") {
-				logServedContextWindow("compact summary", message, model);
+				syncServedContextWindow("compact summary", message, model);
 				if (message.subtype === "success") {
 					finalText = message.result || assistantText;
 				} else {
@@ -761,6 +780,7 @@ function mapToolArgs(
 // Global (not query state):
 let piUI: ExtensionUIContext | null = null;
 const activeQueryContexts = new Set<QueryContext>();
+let boundRuntime: object | undefined;
 
 function contextForToolResults(results: McpResult[]): QueryContext | undefined {
 	for (const result of results) {
@@ -848,17 +868,25 @@ function updateUsage(output: AssistantMessage, usage: Record<string, number | un
 	debug(`usage: in=${output.usage.input} out=${output.usage.output} cacheRead=${output.usage.cacheRead} cacheWrite=${output.usage.cacheWrite} total=${output.usage.totalTokens}${reasoningText} cachePct=${cachePct}% model=${model.id}`);
 }
 
-// Log the *served* context window reported by an SDK result message
-// (modelUsage[id].contextWindow), which can differ from the window pi
-// registered (model.contextWindow) when the runtime entitlement doesn't
-// match the docs — e.g. bare Opus served 200K on Pro, or [1m] not honored.
-// The result message's modelUsage is otherwise discarded; this makes the
-// gap observable. See issue #18.
-function logServedContextWindow(label: string, message: CbMessage, model: Model<any>): void {
+// Apply the served window from an SDK result (modelUsage[id]) onto the
+// registered catalog and the live model pi reads for context usage. The
+// served value wins over the registration estimate when the entitlement
+// differs, e.g. bare Opus served 200K on Pro.
+function syncServedContextWindow(label: string, message: CbMessage, model: Model<any>): void {
 	const modelUsage = (message as any).modelUsage as Record<string, { contextWindow?: number; maxOutputTokens?: number }> | undefined;
 	if (!modelUsage) return;
 	for (const [k, v] of Object.entries(modelUsage)) {
 		debug(`${label}: served contextWindow=${v.contextWindow ?? "?"} maxOutputTokens=${v.maxOutputTokens ?? "?"} servedModel=${k} registered=${model.contextWindow}`);
+	}
+	const changes = syncServedWindow(modelUsage, (id) => {
+		const targets: Array<{ contextWindow?: number; maxTokens?: number }> = [];
+		const registered = MODELS.find((m) => m.id === id);
+		if (registered) targets.push(registered);
+		if (model.id === id) targets.push(model);
+		return targets;
+	});
+	for (const change of changes) {
+		debug(`${label}: ${change.id} ${change.field} ${change.from} -> ${change.to}`);
 	}
 }
 
@@ -1142,7 +1170,7 @@ async function consumeQuery(
 				break;
 			case "result": {
 				const resultMsg = message as Extract<CbMessage, { type: "result" }>;
-				logServedContextWindow("result", message, model);
+				syncServedContextWindow("result", message, model);
 				if (!queryCtx.turnSawStreamEvent && resultMsg.subtype === "success") {
 					ensureTurnStarted(queryCtx);
 					const text = resultMsg.result || "";
@@ -1706,16 +1734,7 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 			// recover it synchronously at module load — the in-process global
 			// alone dies with the old process.
 			writeModelsCache(MODELS);
-			const g = globalThis as Record<symbol, any>;
-			const streamFn = g[ACTIVE_STREAM_SIMPLE_KEY] ?? streamCodebuddySdk;
-			pi.registerProvider(PROVIDER_ID, {
-				name: "CodeBuddy",
-				baseUrl: PROVIDER_ID,
-				apiKey: "not-used",
-				api: "codebuddy-sdk",
-				models: MODELS as any,
-				streamSimple: streamFn as any,
-			});
+			registerCodebuddyProvider(pi);
 			modelsDiscovered = true;
 			debug(`discoverModels: registered ${MODELS.length} models from SDK`);
 		} catch (err) {
@@ -1728,16 +1747,7 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 			if (cached && cached.length) {
 				MODELS = cached;
 				debug(`discoverModels: failed, recovered ${MODELS.length} cached models`, err);
-				const g = globalThis as Record<symbol, any>;
-				const streamFn = g[ACTIVE_STREAM_SIMPLE_KEY] ?? streamCodebuddySdk;
-				pi.registerProvider(PROVIDER_ID, {
-					name: "CodeBuddy",
-					baseUrl: PROVIDER_ID,
-					apiKey: "not-used",
-					api: "codebuddy-sdk",
-					models: MODELS as any,
-					streamSimple: streamFn as any,
-				});
+				registerCodebuddyProvider(pi);
 				modelsDiscovered = true;
 			} else {
 				debug("discoverModels: failed, using fallback models", err);
@@ -1787,14 +1797,14 @@ export default async function (pi: ExtensionAPI) {
 		// Clear the global streamSimple if this instance registered it.
 		// This allows /reload to work — the old instance clears the flag so
 		// the new instance can register fresh without wrapping stale state.
-		const g = globalThis as Record<symbol, any>;
-		if (g[ACTIVE_STREAM_SIMPLE_KEY] === streamCodebuddySdk) {
+		if (clearOwnedStream(globalThis as Record<symbol, any>, streamCodebuddySdk)) {
 			debug(`${event}: clearing ACTIVE_STREAM_SIMPLE_KEY`);
-			g[ACTIVE_STREAM_SIMPLE_KEY] = undefined;
 		}
 	};
 	pi.on("session_start", (event, ctx) => {
 		piUI = ctx.ui;
+		boundRuntime = ctx.modelRegistry;
+		registerCodebuddyProvider(pi);
 		if (event.reason === "new" || event.reason === "resume" || event.reason === "fork") {
 			clearSession(`session_start:${event.reason}`);
 		}
@@ -1852,31 +1862,10 @@ export default async function (pi: ExtensionAPI) {
 
 	// --- Provider ---
 	//
-	// Guard against re-registration when the module is loaded multiple times
-	// (e.g., when spawning subagents). The shared ModelRegistry would otherwise
-	// overwrite the parent's streamSimple, breaking tool result delivery.
-	// See ACTIVE_STREAM_SIMPLE_KEY for the full mechanism.
+	// Register on every runtime. The same ModelRegistry keeps the first
+	// streamSimple; a different runtime gets its own.
 
-	const g = globalThis as Record<symbol, any>;
-	if (!g[ACTIVE_STREAM_SIMPLE_KEY]) {
-		// First instance: store our streamSimple and register.
-		g[ACTIVE_STREAM_SIMPLE_KEY] = streamCodebuddySdk;
-		pi.registerProvider(PROVIDER_ID, {
-			name: "CodeBuddy",
-			baseUrl: PROVIDER_ID,
-			apiKey: "not-used",
-			api: "codebuddy-sdk",
-			models: MODELS as any,
-			// Cast: pi-ai AssistantMessageEventStream diamond dep between pi-coding-agent and pi-agent-core
-			streamSimple: streamCodebuddySdk as any,
-		});
-	} else {
-		// Subsequent instance (subagent session): skip registration entirely.
-		// The subagent already has access to codebuddy-sdk models via the shared
-		// ModelRegistry from the parent's registration. Calls to those models
-		// route through the parent's streamSimple via reentrant QueryContexts.
-		debug(`provider: skipping re-registration, parent instance active (module=${moduleInstanceId})`);
-	}
+	registerCodebuddyProvider(pi);
 
 	// --- AskCodebuddy tool ---
 
