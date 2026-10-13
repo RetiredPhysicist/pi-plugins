@@ -15,6 +15,57 @@ describe("rawModelsFromSdk", () => {
 		assert.equal(models[1].input.includes("image"), true);
 		assert.deepEqual(models[0].cost, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
 	});
+
+	it("prefers served metadata over the name estimate", () => {
+		const models = rawModelsFromSdk([
+			{
+				id: "step-5-preview",
+				name: "Step-5-Preview",
+				maxInputTokens: 1_000_000,
+				maxOutputTokens: 64_000,
+				description: "",
+			},
+			{
+				id: "hy4-preview",
+				name: "Hy4",
+				contextWindow: { defaultLength: 960_000, supportedLengths: [200_000, 960_000] },
+				description: "",
+			},
+			{
+				id: "custom-long",
+				name: "Custom",
+				contextWindow: { supportedLengths: [128_000, 512_000] },
+				description: "",
+			},
+		]);
+		assert.equal(models[0].contextWindow, 1_000_000);
+		assert.equal(models[0].maxTokens, 64_000);
+		assert.equal(models[1].contextWindow, 960_000);
+		assert.equal(models[2].contextWindow, 512_000);
+	});
+
+	it("ignores non-positive metadata and falls back to the name estimate", () => {
+		const models = rawModelsFromSdk([
+			{ id: "step-5-preview", name: "Step", maxInputTokens: 0, maxOutputTokens: -1, description: "" },
+			{ id: "gemini-pro", name: "Gemini", description: "" },
+			{ id: "claude-sonnet", name: "Sonnet", description: "" },
+			{ id: "gpt-5", name: "GPT", description: "" },
+		]);
+		assert.equal(models[0].contextWindow, 131_072);
+		assert.equal(models[0].maxTokens, 8192);
+		assert.equal(models[1].contextWindow, 1_048_576);
+		assert.equal(models[2].contextWindow, 200_000);
+		assert.equal(models[3].contextWindow, 200_000);
+		assert.equal(models[3].maxTokens, 16_384);
+	});
+
+	it("lets buildModels overrides beat metadata", () => {
+		const models = buildModels(
+			rawModelsFromSdk([{ id: "step-5-preview", name: "Step", maxInputTokens: 1_000_000, description: "" }]),
+			{ contextWindow: 200_000 },
+		);
+		assert.equal(models[0].contextWindow, 200_000);
+	});
 });
 
 describe("buildModels", () => {
