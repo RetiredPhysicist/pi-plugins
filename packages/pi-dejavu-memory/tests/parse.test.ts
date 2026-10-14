@@ -104,7 +104,7 @@ describe("MCP_TOOLS", () => {
     assert.notEqual(MCP_TOOLS.search, "search_memories");
   });
 
-  test("read/create/update/delete match cf-noc-mem names", () => {
+  test("read/create/update/delete match dejavu names", () => {
     assert.equal(MCP_TOOLS.read, "read_memory");
     assert.equal(MCP_TOOLS.create, "create_memory");
     assert.equal(MCP_TOOLS.update, "update_memory");

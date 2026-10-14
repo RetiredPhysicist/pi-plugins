@@ -1,11 +1,11 @@
 #!/bin/bash
-# Test pi-nocturne-memory extension
+# Test pi-dejavu-memory extension
 set -e
 
-echo "=== Testing pi-nocturne-memory ==="
+echo "=== Testing pi-dejavu-memory ==="
 
 # Test 1: Config file exists
-CONFIG_PATH="$HOME/.pi/agent/extensions/pi-nocturne-memory/config.json"
+CONFIG_PATH="$HOME/.pi/agent/extensions/pi-dejavu-memory/config.json"
 if [ -f "$CONFIG_PATH" ]; then
   echo "✓ Config file exists"
 else
@@ -38,4 +38,4 @@ else
   echo "⚠ MCP server unreachable (may need auth)"
 fi
 
-echo "=== pi-nocturne-memory tests passed ==="
+echo "=== pi-dejavu-memory tests passed ==="

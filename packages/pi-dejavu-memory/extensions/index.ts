@@ -53,7 +53,7 @@ const MCP_HEADERS: Record<string, string> = config.mcpHeaders ?? {};
 /** Boot resources read via read_memory (boot + recent + triggers). */
 export const BOOT_URIS = ["system://boot", "system://recent/5", "system://triggers"] as const;
 
-/** MCP tool names as exposed by cf-noc-mem (must stay in sync with the server). */
+/** MCP tool names as exposed by the DejaVu MCP server (must stay in sync with the server). */
 export const MCP_TOOLS = {
   read: "read_memory",
   search: "search_memory", // not search_memories
@@ -270,7 +270,7 @@ export function toolResultText(data: any, fallback: string): string {
 
 export default function (pi: ExtensionAPI): void {
   pi.registerTool({
-    name: "noc_boot",
+    name: "dejavu_boot",
     label: "Boot Memory",
     description:
       "Call at session start. Loads system://boot, system://recent/5, system://triggers, then best-effort system://briefing. Afterward read system://focus (recent is a briefing subset). Self-discipline startup protocol.",
@@ -332,11 +332,11 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "noc_read",
+    name: "dejavu_read",
     label: "Read Memory",
-    description: "Read a memory by URI. Use system:// URIs or memory paths like core://agent.",
+    description: "Read a memory by URI. Use system:// URIs or memory paths like dejavu://agent.",
     parameters: Type.Object({
-      uri: Type.String({ description: "Memory URI (e.g., core://agent, system://boot)" }),
+      uri: Type.String({ description: "Memory URI (e.g., dejavu://agent, system://boot)" }),
     }),
 
     async execute(_toolCallId, params) {
@@ -356,14 +356,14 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "noc_search",
+    name: "dejavu_search",
     label: "Search Memory",
     description:
       "Search memories with semantic + keyword recall (multilingual, CJK-capable). Describe what you are looking for in natural language — semantic search finds memories that share no keywords (e.g. query \"部署失败\" recalls a note about a broken release pipeline).",
     parameters: Type.Object({
       query: Type.String({ description: "Concept or keywords to search for" }),
       limit: Type.Optional(Type.Number({ description: "Max results (1-50, default 20)" })),
-      domain: Type.Optional(Type.String({ description: "Domain filter (e.g., core, writer); ignored by current cf-noc-mem" })),
+      domain: Type.Optional(Type.String({ description: "Domain filter (e.g., dejavu); ignored by the current DejaVu server" })),
     }),
 
     async execute(_toolCallId, params) {
@@ -387,11 +387,11 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "noc_create",
+    name: "dejavu_create",
     label: "Create Memory",
     description: "Create a new memory node. Include [Baseline], [Deviation], [Result], [Reusable judgment] for behavior records.",
     parameters: Type.Object({
-      parent_uri: Type.String({ description: "Parent URI (e.g., core://)" }),
+      parent_uri: Type.String({ description: "Parent URI (e.g., dejavu://)" }),
       content: Type.String({ description: "Memory content (Markdown supported)" }),
       priority: Type.Number({ description: "Priority (0=highest)", default: 2 }),
       disclosure: Type.String({ description: "When to recall this memory (e.g., 'When discussing X')" }),
@@ -424,11 +424,11 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "noc_update",
+    name: "dejavu_update",
     label: "Update Memory",
     description:
       "Update existing memory. Supports full content replace, old_string/new_string patch, or append. " +
-      "Must noc_read the URI first. Optional relation marks knowledge evolution: replace|enrich|confirm|challenge.",
+      "Must dejavu_read the URI first. Optional relation marks knowledge evolution: replace|enrich|confirm|challenge.",
     parameters: Type.Object({
       uri: Type.String({ description: "Memory URI to update" }),
       content: Type.Optional(Type.String({ description: "Full replacement content" })),
@@ -470,10 +470,10 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.registerTool({
-    name: "noc_delete",
+    name: "dejavu_delete",
     label: "Delete Memory",
     description:
-      "Delete a memory by URI (cuts its path). Always noc_read the full node first. " +
+      "Delete a memory by URI (cuts its path). Always dejavu_read the full node first. " +
       "If the node has children, the server may return orphans to handle first.",
     parameters: Type.Object({
       uri: Type.String({ description: "Memory URI to delete" }),
