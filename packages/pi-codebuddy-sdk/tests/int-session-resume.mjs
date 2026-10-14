@@ -22,7 +22,7 @@ const OTHER_PROVIDER = requireEnv("CODEBUDDY_SDK_TESTING_ALT_PROVIDER");
 const OTHER_MODEL = requireEnv("CODEBUDDY_SDK_TESTING_ALT_MODEL");
 
 const TIMEOUT = 180_000;
-const BRIDGE_MODEL = "codebuddy/hy3-preview-agent-ioa";
+const BRIDGE_MODEL = "codebuddy/deepseek-v4.1-flash";
 
 // Random words to avoid Claude memorizing test values across runs
 const WORD_A = `alpha${Math.random().toString(36).slice(2, 6)}`;

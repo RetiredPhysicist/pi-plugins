@@ -14,7 +14,7 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
 
-const BRIDGE_MODEL = "codebuddy/hy3-preview-agent-ioa";
+const BRIDGE_MODEL = "codebuddy/deepseek-v4.1-flash";
 
 test("turn 2 reuses session after tool-using turn 1 (no spurious rebuild)", { timeout: 120_000 }, async () => {
 	const harness = createRpcHarness({

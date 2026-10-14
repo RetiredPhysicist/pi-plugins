@@ -55,14 +55,14 @@ export CODEBUDDY_API_KEY="your-api-key"
 
 Obtain the key from your CodeBuddy account. Do not commit it or store it in repo files.
 
-### 3. Tencent iOA (internal network)
+### 3. Managed network environment
 
 ```bash
-export CODEBUDDY_INTERNET_ENVIRONMENT=ioa
+export CODEBUDDY_INTERNET_ENVIRONMENT=<environment>
 codebuddy login
 ```
 
-Use this when CodeBuddy must run on the iOA network. Add `CODEBUDDY_API_KEY` as well if your environment requires it.
+Set `<environment>` to the value your CodeBuddy deployment uses. Ask your CodeBuddy administrator if the value is not documented in your deployment's own README, and add `CODEBUDDY_API_KEY` as well if your environment requires it.
 
 ## Usage
 
@@ -71,7 +71,7 @@ pi
 /model
 ```
 
-Pick any entry prefixed with `codebuddy/` (for example `codebuddy/hy3-preview-agent-ioa`).
+Pick any entry prefixed with `codebuddy/` (for example `codebuddy/deepseek-v4.1-flash`).
 
 Tools, skills, extensions, `/compact`, and steer behave the same as with other Pi providers.
 

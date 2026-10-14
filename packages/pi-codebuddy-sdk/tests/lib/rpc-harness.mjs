@@ -42,12 +42,17 @@ export function createRpcHarness(opts) {
 	let listeners = [];
 	let reqId = 0;
 
+	const writeRpc = (chunk) => {
+		if (rpcLog && !rpcLog.writableEnded && !rpcLog.destroyed) rpcLog.write(chunk);
+	};
+
 	function start() {
 		// Truncate the debug log on each run so test assertions that grep the
 		// log see only this run's output, not accumulated history from prior
 		// failing runs. RPC log is still append so cross-run comparisons work.
 		writeFileSync(DEBUG_LOG, "");
 		rpcLog = createWriteStream(RPC_LOG, { flags: "a" });
+		rpcLog.on("error", () => {});
 		const spawnArgs = ["--no-session", "-ne", "-e", DIR, "--mode", "rpc", ...args];
 		pi = spawn("pi", spawnArgs, {
 			cwd,
@@ -55,7 +60,7 @@ export function createRpcHarness(opts) {
 			env: { ...process.env, PATH: cleanPath, CODEBUDDY_SDK_DEBUG: "1", CODEBUDDY_SDK_DEBUG_PATH: DEBUG_LOG, ...env },
 		});
 
-		pi.stderr.on("data", (d) => rpcLog.write(d));
+		pi.stderr.on("data", writeRpc);
 
 		const decoder = new StringDecoder("utf8");
 		pi.stdout.on("data", (chunk) => {
@@ -67,7 +72,7 @@ export function createRpcHarness(opts) {
 				buffer = buffer.slice(i + 1);
 				try {
 					const msg = JSON.parse(line);
-					rpcLog.write(`< ${line}\n`);
+					writeRpc(`< ${line}\n`);
 					for (const fn of [...listeners]) fn(msg);
 				} catch {}
 			}
@@ -95,7 +100,7 @@ export function createRpcHarness(opts) {
 	function send(cmd, timeout = defaultTimeout) {
 		const id = `req_${++reqId}`;
 		const full = { ...cmd, id };
-		rpcLog.write(`> ${JSON.stringify(full)}\n`);
+		writeRpc(`> ${JSON.stringify(full)}\n`);
 		pi.stdin.write(JSON.stringify(full) + "\n");
 		return new Promise((resolve, reject) => {
 			const timer = setTimeout(() => reject(new Error(`Timeout: ${cmd.type}`)), timeout);

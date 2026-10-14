@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Prompt cache efficiency test for pi-codebuddy-sdk.
 # Runs a multi-turn conversation and verifies Anthropic prompt caching is working.
+# Pinned to a Claude model on purpose: the >=90% cache-hit threshold below is an
+# Anthropic prompt-caching property, not a property of the other CodeBuddy models.
 # Expects: cacheRead grows across turns (system prompt + history are cache-hit),
 #   cacheWrite is small after the first turn (only new content is written).
 #
@@ -24,7 +26,7 @@ rm -f "$TMPFILE" "$CODEBUDDY_SDK_DEBUG_PATH"
 
 echo "Running 5-turn conversation (text + tool use)..."
 timeout 180 pi --no-session -ne -e "$DIR" \
-  --model "codebuddy/hy3-preview-agent-ioa" \
+  --model "codebuddy/claude-sonnet-4.6" \
   --mode json \
   -p "The secret number is 42. Acknowledge briefly." \
      "Write the secret number to $TMPFILE. Just the number, nothing else." \
