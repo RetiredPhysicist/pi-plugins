@@ -14,7 +14,7 @@ import { readModelsCache, writeModelsCache, MODELS_CACHE_KEY } from "../src/mode
 import { FALLBACK_MODELS, rawModelsFromSdk } from "../src/models.js";
 
 const SAMPLE = rawModelsFromSdk([
-	{ value: "hy3-preview-agent-ioa", displayName: "Hunyuan 3", description: "" },
+	{ value: "vendor-thinking-model", displayName: "Thinking Model", description: "" },
 	{ value: "deepseek-v4-flash", displayName: "DeepSeek V4 Flash", description: "" },
 ]);
 
@@ -39,7 +39,7 @@ describe("writeModelsCache / readModelsCache", () => {
 		delete globalThis[MODELS_CACHE_KEY];
 		const loaded = readModelsCache();
 		assert.ok(loaded, "expected a recovered model list");
-		assert.deepEqual(loaded.map((m) => m.id), ["hy3-preview-agent-ioa", "deepseek-v4-flash"]);
+		assert.deepEqual(loaded.map((m) => m.id), ["vendor-thinking-model", "deepseek-v4-flash"]);
 	});
 
 	it("returns undefined when no cache file exists", () => {

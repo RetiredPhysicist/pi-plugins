@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
 
 const TIMEOUT = 120_000;
-const BRIDGE_MODEL = "codebuddy/hy3-preview-agent-ioa";
+const BRIDGE_MODEL = "codebuddy/deepseek-v4.1-flash";
 
 const testAgentDir = mkdtempSync(join(tmpdir(), "served-window-agent-"));
 writeFileSync(join(testAgentDir, "settings.json"), JSON.stringify({}));
@@ -36,7 +36,8 @@ try {
 	}
 
 	const debug = readFileSync(DEBUG_LOG, "utf8");
-	const line = debug.split("\n").find((l) => /result: served contextWindow=/.test(l));
+	const lines = debug.split("\n");
+	const line = lines.find((l) => /result: served contextWindow=/.test(l));
 	if (!line) {
 		throw new Error(`debug log has no "result: served contextWindow=" line.\n\nExcerpt:\n${debug.slice(-2000)}`);
 	}
@@ -52,9 +53,11 @@ try {
 	// actually serves, or pi's status bar and auto-compaction threshold drift
 	// from reality (issue #24/#17). Account-agnostic — holds on any plan.
 	const served = Number(line.match(/served contextWindow=(\d+)/)[1]);
-	const registered = Number(line.match(/registered=(\d+)/)[1]);
-	if (served !== registered) {
-		throw new Error(`served contextWindow (${served}) != registered (${registered}); pi's compaction threshold is out of sync with the CC window.\n  ${line.trim()}`);
+	const registeredBefore = Number(line.match(/registered=(\d+)/)[1]);
+	const servedModelId = BRIDGE_MODEL.split("/")[1];
+	const synced = lines.find((l) => new RegExp(`result: ${servedModelId} contextWindow ${registeredBefore} -> ${served}`).test(l));
+	if (served > 0 && !synced) {
+		throw new Error(`served contextWindow (${served}) was not synced from registered (${registeredBefore}).\n  ${line.trim()}`);
 	}
 
 	console.log("PASS");

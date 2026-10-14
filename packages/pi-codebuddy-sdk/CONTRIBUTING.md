@@ -7,7 +7,7 @@ Guide for maintainers. End users only need [README.md](README.md).
 - **Node.js** ≥ 20
 - **`pi`** CLI on `PATH` (global install, not `node_modules/.bin/pi`)
 - **`codebuddy`** CLI on `PATH` (Agent SDK spawns it as a subprocess)
-- **CodeBuddy auth** — same three options as README: `codebuddy login`, `CODEBUDDY_API_KEY`, or iOA (`CODEBUDDY_INTERNET_ENVIRONMENT=ioa`)
+- **CodeBuddy auth** — same three options as README: `codebuddy login`, `CODEBUDDY_API_KEY`, or `CODEBUDDY_INTERNET_ENVIRONMENT=<environment>`
 
 ```bash
 git clone <repo>
@@ -81,7 +81,7 @@ pi   # reproduce issue, then inspect log
 | Variable | Purpose |
 |----------|---------|
 | `CODEBUDDY_API_KEY` | API key auth (README) |
-| `CODEBUDDY_INTERNET_ENVIRONMENT=ioa` | iOA network (README) |
+| `CODEBUDDY_INTERNET_ENVIRONMENT=<environment>` | Managed network environment (README) |
 | `CODEBUDDY_CONFIG_DIR` | Non-default CodeBuddy config dir; session I/O must match CLI — extension reads this automatically |
 
 The extension passes through `process.env` to the CodeBuddy subprocess so login and keys work without extra wiring.
