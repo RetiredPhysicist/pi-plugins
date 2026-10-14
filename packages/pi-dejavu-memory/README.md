@@ -11,6 +11,12 @@
 
 Agent-side companion to [DejaVu](https://github.com/RealAlexandreAI/DejaVu) (the Cloudflare-hosted MCP memory server). Also available for dsh: [dsh-dejavu-memory](https://github.com/RetiredPhysicist/dsh-plugins/tree/main/packages/dsh-dejavu-memory).
 
+There is also a **ChatGPT and Codex plugin**, [dejavu-memory](https://github.com/RetiredPhysicist/openai-plugins/tree/main/plugins/dejavu-memory) — the same memory server, but with an interactive knowledge graph of the tree inside the chat client. This Pi extension stays tool-only.
+
+<p align="center">
+  <img src="./assets/readme/dejavu-memory-search.webp" width="100%" alt="The DejaVu Memory plugin in Codex: an interactive graph of the memory tree with search hits highlighted and the node inspector open">
+</p>
+
 ## Features
 
 - **SessionStart Boot Protocol** — automatically calls `dejavu_boot` (reads `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`) at session start; then read `system://focus` to resume active working trees (`recent` is a briefing subset — no need to re-read it after boot)
@@ -72,5 +78,6 @@ MIT
 ## Related
 
 - [DejaVu](https://github.com/RealAlexandreAI/DejaVu) — the MCP memory server this extension talks to
+- [dejavu-memory for ChatGPT and Codex](https://github.com/RetiredPhysicist/openai-plugins/tree/main/plugins/dejavu-memory) — same memory server, with an interactive knowledge graph
 - [dsh-dejavu-memory](https://github.com/RetiredPhysicist/dsh-plugins/tree/main/packages/dsh-dejavu-memory) — same memory tools for dsh
 - [nocturne_memory](https://github.com/Dataojitori/nocturne_memory) — upstream project
