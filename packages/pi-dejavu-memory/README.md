@@ -13,9 +13,9 @@ Agent-side companion to [DejaVu](https://github.com/RealAlexandreAI/DejaVu) (the
 
 ## Features
 
-- **SessionStart Boot Protocol** — automatically calls `noc_boot` (reads `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`) at session start; then read `system://focus` to resume active working trees (`recent` is a briefing subset — no need to re-read it after boot)
+- **SessionStart Boot Protocol** — automatically calls `dejavu_boot` (reads `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`) at session start; then read `system://focus` to resume active working trees (`recent` is a briefing subset — no need to re-read it after boot)
 - **Memory Rules** — global rules injected every session for intelligent memory usage (write-judgement, update-over-create, trigger discipline)
-- **Memory Tools** — `noc_read`, `noc_create`, `noc_update`, `noc_delete`, `noc_search`, `noc_alias`, `noc_triggers`
+- **Memory Tools** — `dejavu_read`, `dejavu_create`, `dejavu_update`, `dejavu_delete`, `dejavu_search`, `dejavu_alias`, `dejavu_triggers`
 
 ## Install
 
@@ -23,7 +23,7 @@ Agent-side companion to [DejaVu](https://github.com/RealAlexandreAI/DejaVu) (the
 pi install npm:pi-dejavu-memory
 ```
 
-> **Upgrading from pi-nocturne-memory (≤1.0.x):** the package was renamed to `pi-dejavu-memory` and tools renamed from `nocturne_*` to `noc_*`. Old config at `~/.pi/agent/extensions/pi-nocturne-memory/config.json` is still read as a fallback, so your MCP URL/credentials keep working — just reinstall the new package and update any prompt text that referenced `nocturne_*` tools.
+> **Upgrading from pi-nocturne-memory (≤1.0.x):** the package was renamed to `pi-dejavu-memory` and tools renamed from `nocturne_*` to `dejavu_*`. Old config at `~/.pi/agent/extensions/pi-nocturne-memory/config.json` is still read as a fallback, so your MCP URL/credentials keep working — just reinstall the new package and update any prompt text that referenced `nocturne_*` tools.
 
 ## Configure
 
@@ -56,14 +56,14 @@ For servers behind Cloudflare Access (e.g. dejavu.example.com), pass the **servi
 ## How It Works
 
 1. **SessionStart Hook** — triggers boot at session start
-2. **Agent calls `noc_boot`** — loads `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`
+2. **Agent calls `dejavu_boot`** — loads `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`
 3. **Agent reads `system://focus`** — resume active working trees (`recent` already covered by boot/briefing)
 4. **Global Rules** — memory operation rules injected every session
 5. **Agent uses memory tools** — read/create/update/delete based on rules
 
-## Why noc_* (not nocturne_*)?
+## Why dejavu_* (not nocturne_*)?
 
-Some agents probe for `read_mcp_resource` before reaching for a memory tool, which wastes a round trip ([upstream issue #32](https://github.com/Dataojitori/nocturne_memory/issues/32)). The `noc_boot` / `noc_read` naming, plus the boot protocol text in the rules, steers models to the right tool explicitly — no resource shim needed.
+Some agents probe for `read_mcp_resource` before reaching for a memory tool, which wastes a round trip ([upstream issue #32](https://github.com/Dataojitori/nocturne_memory/issues/32)). The `dejavu_boot` / `dejavu_read` naming, plus the boot protocol text in the rules, steers models to the right tool explicitly — no resource shim needed.
 
 ## License
 
