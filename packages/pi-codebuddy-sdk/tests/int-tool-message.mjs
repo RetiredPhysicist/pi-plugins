@@ -11,7 +11,7 @@ const TEST_TIMEOUT = 60_000;
 
 const harness = createRpcHarness({
 	name: "tool-message",
-	args: ["-e", "./tests/fixtures/slow-tool-extension.ts", "--model", "codebuddy/hy3-preview-agent-ioa"],
+	args: ["-e", "./tests/fixtures/slow-tool-extension.ts", "--model", "codebuddy/deepseek-v4.1-flash"],
 	defaultTimeout: TEST_TIMEOUT,
 });
 

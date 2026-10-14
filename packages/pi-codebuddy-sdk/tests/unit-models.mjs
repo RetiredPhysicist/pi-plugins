@@ -8,10 +8,10 @@ import { buildModels, codebuddyModelId, rawModelsFromSdk, resolveModel, FALLBACK
 describe("rawModelsFromSdk", () => {
 	it("maps SDK ModelInfo to pi models", () => {
 		const models = rawModelsFromSdk([
-			{ value: "hy3-preview-agent-ioa", displayName: "Hunyuan 3", description: "" },
+			{ value: "vendor-thinking-model", displayName: "Thinking Model", description: "" },
 			{ id: "claude-sonnet-4.6", name: "Claude Sonnet", description: "" },
 		]);
-		assert.equal(models[0].id, "hy3-preview-agent-ioa");
+		assert.equal(models[0].id, "vendor-thinking-model");
 		assert.equal(models[1].input.includes("image"), true);
 		assert.deepEqual(models[0].cost, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
 	});
@@ -79,7 +79,7 @@ describe("buildModels", () => {
 
 	it("applies global contextWindow/maxTokens overrides", () => {
 		const models = buildModels(
-			rawModelsFromSdk([{ value: "hy3-preview-agent-ioa", displayName: "H", description: "" }]),
+			rawModelsFromSdk([{ value: "vendor-text-model", displayName: "H", description: "" }]),
 			{ contextWindow: 300_000, maxTokens: 32_768 },
 		);
 		assert.equal(models[0].contextWindow, 300_000);
@@ -114,7 +114,7 @@ describe("buildModels", () => {
 
 describe("codebuddyModelId", () => {
 	it("returns model id unchanged", () => {
-		assert.equal(codebuddyModelId({ id: "hy3-preview-agent-ioa" }), "hy3-preview-agent-ioa");
+		assert.equal(codebuddyModelId({ id: "vendor-text-model" }), "vendor-text-model");
 	});
 });
 
@@ -122,7 +122,7 @@ describe("resolveModel", () => {
 	const models = buildModels(FALLBACK_MODELS);
 
 	it("resolves by partial id", () => {
-		assert.equal(resolveModel(models, "hy3")?.id, "hy3-preview-agent-ioa");
+		assert.equal(resolveModel(models, "deepseek")?.id, "deepseek-v4.1-flash");
 	});
 
 	it("returns undefined when no match", () => {

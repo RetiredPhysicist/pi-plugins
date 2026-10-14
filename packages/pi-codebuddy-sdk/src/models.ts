@@ -71,7 +71,7 @@ export function rawModelsFromSdk(supported: Array<ModelInfo & SdkModelMeta>): Pi
 }
 
 export const FALLBACK_MODELS: PiModel[] = [
-	{ id: "hy3-preview-agent-ioa", name: "Hunyuan 3 Preview", reasoning: true, input: ["text"], contextWindow: DEFAULT_CONTEXT, maxTokens: DEFAULT_MAX_TOKENS, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
+	{ id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", reasoning: true, input: ["text"], contextWindow: 1_000_000, maxTokens: 128_000, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
 ];
 
 export type ModelOverrides = {
