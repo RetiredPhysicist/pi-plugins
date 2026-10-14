@@ -51,11 +51,11 @@ const failures: Array<[string, Reply, string]> = [
 ];
 
 const wrappers: Array<[string, Record<string, unknown>, string]> = [
-  ["noc_create", { parent_uri: "noc://", content: "a note", priority: 2, disclosure: "when x" }, "create_memory"],
-  ["noc_read", { uri: "noc://a" }, "read_memory"],
-  ["noc_search", { query: "x" }, "search_memory"],
-  ["noc_update", { uri: "noc://a", append: "more" }, "update_memory"],
-  ["noc_delete", { uri: "noc://a" }, "delete_memory"],
+  ["dejavu_create", { parent_uri: "dejavu://", content: "a note", priority: 2, disclosure: "when x" }, "create_memory"],
+  ["dejavu_read", { uri: "dejavu://a" }, "read_memory"],
+  ["dejavu_search", { query: "x" }, "search_memory"],
+  ["dejavu_update", { uri: "dejavu://a", append: "more" }, "update_memory"],
+  ["dejavu_delete", { uri: "dejavu://a" }, "delete_memory"],
 ];
 
 for (const [tool, params, mcpName] of wrappers) {
@@ -80,10 +80,10 @@ for (const [tool, params, mcpName] of wrappers) {
   });
 }
 
-describe("noc_boot", () => {
+describe("dejavu_boot", () => {
   test("protocol failures are errored reads; all failing → failed tool call", async () => {
     replies = [rpcError(-32603, "Internal error"), http(502, "bad gateway"), garbage];
-    await assert.rejects(run("noc_boot", {}), (err: Error) => {
+    await assert.rejects(run("dejavu_boot", {}), (err: Error) => {
       assert.equal(
         err.message,
         [
@@ -99,7 +99,7 @@ describe("noc_boot", () => {
 
   test("a protocol failure is never loaded as a node but is listed; failed briefing is skipped", async () => {
     replies = [ok("BOOT"), rpcError(-32603, "Internal error"), ok("TRIG"), http(500, "briefing down")];
-    const r = await run("noc_boot", {});
+    const r = await run("dejavu_boot", {});
     assert.equal(r.details.booted, 2);
     assert.equal(
       r.content[0].text,
@@ -111,7 +111,7 @@ describe("noc_boot", () => {
 
   test("garbage briefing is skipped too", async () => {
     replies = [ok("BOOT"), ok("RECENT"), ok("TRIG"), garbage];
-    const r = await run("noc_boot", {});
+    const r = await run("dejavu_boot", {});
     assert.equal(r.details.booted, 3);
     assert.ok(!r.content[0].text.includes("briefing"));
   });

@@ -40,12 +40,12 @@ const ok = (text: string) => ({ content: [{ type: "text", text }] });
 const failed = (text: string) => ({ content: [{ type: "text", text }], isError: true });
 const run = (name: string, params: Record<string, unknown>) => tools.get(name)!.execute("call-1", params, undefined, undefined);
 
-const createParams = { parent_uri: "noc://", content: "a note", priority: 2, disclosure: "when x" };
+const createParams = { parent_uri: "dejavu://", content: "a note", priority: 2, disclosure: "when x" };
 
-describe("noc_create", () => {
+describe("dejavu_create", () => {
   test("isError: true → failed tool call with the server text verbatim", async () => {
     nextResults = [failed(NOT_STORED)];
-    await assert.rejects(run("noc_create", createParams), (err: Error) => {
+    await assert.rejects(run("dejavu_create", createParams), (err: Error) => {
       assert.equal(err.message, NOT_STORED);
       return true;
     });
@@ -53,24 +53,24 @@ describe("noc_create", () => {
   });
 
   test("success is unchanged", async () => {
-    nextResults = [ok("Created: noc://a_note (audit 7)")];
-    const r = await run("noc_create", createParams);
-    assert.deepEqual(r, { content: [{ type: "text", text: "Created: noc://a_note (audit 7)" }] });
+    nextResults = [ok("Created: dejavu://a_note (audit 7)")];
+    const r = await run("dejavu_create", createParams);
+    assert.deepEqual(r, { content: [{ type: "text", text: "Created: dejavu://a_note (audit 7)" }] });
   });
 
   test("empty success still falls back to 'Created'", async () => {
     nextResults = [{ content: [] }];
-    const r = await run("noc_create", createParams);
+    const r = await run("dejavu_create", createParams);
     assert.equal(r.content[0].text, "Created");
   });
 });
 
 describe("other wrappers treat isError as failure too", () => {
   const cases: Array<[string, Record<string, unknown>, string, string]> = [
-    ["noc_read", { uri: "noc://missing" }, "read_memory", "Memory not found: noc://missing"],
-    ["noc_search", { query: "x" }, "search_memory", "Search failed: index unavailable"],
-    ["noc_update", { uri: "noc://a", append: "more" }, "update_memory", "Must read noc://a before updating"],
-    ["noc_delete", { uri: "noc://a" }, "delete_memory", "Cannot delete noc://a: has children"],
+    ["dejavu_read", { uri: "dejavu://missing" }, "read_memory", "Memory not found: dejavu://missing"],
+    ["dejavu_search", { query: "x" }, "search_memory", "Search failed: index unavailable"],
+    ["dejavu_update", { uri: "dejavu://a", append: "more" }, "update_memory", "Must read dejavu://a before updating"],
+    ["dejavu_delete", { uri: "dejavu://a" }, "delete_memory", "Cannot delete dejavu://a: has children"],
   ];
   for (const [tool, params, mcpName, text] of cases) {
     test(`${tool}: isError → rejects with server text; success unchanged`, async () => {
@@ -84,12 +84,12 @@ describe("other wrappers treat isError as failure too", () => {
     });
   }
 
-  test("noc_boot: an isError read is reported as an error, not loaded as a node", async () => {
+  test("dejavu_boot: an isError read is reported as an error, not loaded as a node", async () => {
     nextResults = [failed("boot exploded"), failed("recent exploded"), failed("triggers exploded")];
-    await assert.rejects(run("noc_boot", {}), (err: Error) => /system:\/\/boot: boot exploded/.test(err.message));
+    await assert.rejects(run("dejavu_boot", {}), (err: Error) => /system:\/\/boot: boot exploded/.test(err.message));
 
     nextResults = [ok("BOOT"), failed("recent exploded"), ok("TRIG"), failed("no briefing")];
-    const r2 = await run("noc_boot", {});
+    const r2 = await run("dejavu_boot", {});
     assert.equal(r2.details.booted, 2);
     assert.ok(!r2.content[0].text.includes("=== system://recent/5 ==="));
     assert.ok(r2.content[0].text.includes("- system://recent/5: recent exploded"));

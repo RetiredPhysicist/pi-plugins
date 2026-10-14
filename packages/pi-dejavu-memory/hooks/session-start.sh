@@ -2,7 +2,7 @@
 # SessionStart hook for pi-dejavu-memory
 # This runs when a new Pi session starts
 
-# Check if noc-memory MCP is available
+# Check if the DejaVu memory MCP is available
 if command -v pi &> /dev/null; then
   # Trigger the boot protocol by calling the MCP tool
   # This will be picked up by the agent
