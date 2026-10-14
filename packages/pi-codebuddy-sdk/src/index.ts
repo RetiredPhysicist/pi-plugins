@@ -853,10 +853,18 @@ function buildMcpServers(tools: Tool[], queryCtx: QueryContext): Record<string, 
 // --- Usage helpers ---
 
 function updateUsage(output: AssistantMessage, usage: Record<string, number | undefined>, model: Model<any>): void {
-	if (usage.input_tokens != null) output.usage.input = usage.input_tokens;
+	// CodeBuddy reports OpenAI/DeepSeek-style usage: input_tokens covers the whole prompt and
+	// cache_read_input_tokens is the cached slice of that same prompt. pi's Usage type is
+	// Anthropic-style, where input holds only the uncached remainder, because pi derives
+	// promptTokens = input + cacheRead + cacheWrite (core/cache-stats). Storing the total in
+	// the input field therefore counts the cached prompt twice and makes pi report bogus
+	// 'Cache miss: <n> tokens re-billed' notices. Mirrors pi-ai's openai-completions adapter.
+	const cacheReadTokens = usage.cache_read_input_tokens ?? 0;
+	const cacheWriteTokens = usage.cache_creation_input_tokens ?? 0;
+	if (usage.input_tokens != null) output.usage.input = Math.max(0, usage.input_tokens - cacheReadTokens - cacheWriteTokens);
 	if (usage.output_tokens != null) output.usage.output = usage.output_tokens;
-	if (usage.cache_read_input_tokens != null) output.usage.cacheRead = usage.cache_read_input_tokens;
-	if (usage.cache_creation_input_tokens != null) output.usage.cacheWrite = usage.cache_creation_input_tokens;
+	if (usage.cache_read_input_tokens != null) output.usage.cacheRead = cacheReadTokens;
+	if (usage.cache_creation_input_tokens != null) output.usage.cacheWrite = cacheWriteTokens;
 	// CodeBuddy may report reasoning/thinking tokens separately, while pi's Usage type does not model that field.
 	const reasoning = usage.reasoning_tokens ?? usage.thinking_tokens;
 	if (reasoning != null) (output.usage as typeof output.usage & { reasoning?: number }).reasoning = reasoning;
