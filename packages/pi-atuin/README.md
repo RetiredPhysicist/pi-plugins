@@ -21,7 +21,7 @@ pi install npm:pi-atuin
 Or from source:
 
 ```bash
-git clone https://github.com/RetiredPhysicist/pi-plugins.git && cd pi-plugins/packages/pi-atuin.git
+git clone https://github.com/RetiredPhysicist/pi-plugins.git && cd pi-plugins/packages/pi-atuin
 cd pi-atuin && pi install .
 ```
 
