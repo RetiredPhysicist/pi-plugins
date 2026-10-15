@@ -2,7 +2,6 @@
 
 Multimodal perception for **Pi**: image / audio / video / document understanding, transcription, and image generation — delegated to **Gemini**.
 
-[English](README.md) · [中文](README.zh.md)
 
 ## Two providers (pick one)
 
