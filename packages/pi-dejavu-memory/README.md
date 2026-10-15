@@ -14,7 +14,11 @@ Agent-side companion to [DejaVu](https://github.com/RealAlexandreAI/DejaVu) (the
 There is also a **ChatGPT and Codex plugin**, [dejavu-memory](https://github.com/RetiredPhysicist/openai-plugins/tree/main/plugins/dejavu-memory) — the same memory server, but with an interactive knowledge graph of the tree inside the chat client. This Pi extension stays tool-only.
 
 <p align="center">
-  <img src="./assets/readme/dejavu-memory-search.webp" width="100%" alt="The DejaVu Memory plugin in Codex: an interactive graph of the memory tree with search hits highlighted and the node inspector open">
+  <img src="./assets/readme/dejavu-memory-graph.webp" width="100%" alt="The DejaVu Memory plugin in Codex: the whole memory tree drawn as an interactive graph, with type colours and priority-sized nodes">
+</p>
+
+<p align="center">
+  <img src="./assets/readme/dejavu-memory-inspector.webp" width="100%" alt="Selecting a node opens the inspector: the memory URI, its type and priority, and the body text, with its subtree highlighted">
 </p>
 
 ## Features
