@@ -9,10 +9,12 @@ import { appendFileSync, mkdirSync, realpathSync, statSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
 import { PROVIDER_ID, messageContentToText, convertPiMessages } from "./convert.js";
-import { buildModels, codebuddyModelId, FALLBACK_MODELS, rawModelsFromSdk, resolveModel as _resolveModel, type PiModel } from "./models.js";
+import { buildModels, codebuddyModelId, FALLBACK_MODELS, matchesAnyOverrideKey, rawModelsFromSdk, resolveModel as _resolveModel, type PiModel } from "./models.js";
 import { readModelsCache, writeModelsCache } from "./models-cache.js";
+import { applyLearnedWindows, pruneLearnedWindows, readLearnedWindows, recordServedWindows, writeLearnedWindows } from "./learned-windows.js";
 import { clearOwnedStream, providerRegistration } from "./provider-registration.js";
 import { syncServedWindow } from "./served-window.js";
+import { withCliRuntime } from "./cli-runtime.js";
 import { readTranscript } from "./transcript-compat.js";
 import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, buildCodebuddySystemPrompt } from "./skills.js";
 import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
@@ -165,7 +167,7 @@ function installTransportTeardownGuard(sdkQuery: unknown): void {
 
 /** Create an SDK query and immediately arm the transport teardown guard. */
 function startQuery(args: Parameters<typeof query>[0]): ReturnType<typeof query> {
-	const q = query(args);
+	const q = query(withCliRuntime(args, providerSettings.executable));
 	try {
 		installTransportTeardownGuard(q);
 	} catch (err) {
@@ -895,6 +897,12 @@ function syncServedContextWindow(label: string, message: CbMessage, model: Model
 	});
 	for (const change of changes) {
 		debug(`${label}: ${change.id} ${change.field} ${change.from} -> ${change.to}`);
+	}
+	// Remember the served values so the next process starts from them instead of
+	// re-registering the estimate (this backend reports no window metadata).
+	if (changes.length) {
+		const learned = readLearnedWindows();
+		if (recordServedWindows(learned, changes)) writeLearnedWindows(learned);
 	}
 }
 
@@ -1735,6 +1743,12 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 				providerSettings.modelOverrides ? undefined : providerSettings,
 				providerSettings.modelOverrides,
 			);
+			// Re-apply windows learned in earlier processes: they beat the name
+			// estimate and the served metadata, but never a user override. Ids the
+			// backend no longer serves are dropped from the store.
+			const learned = pruneLearnedWindows(readLearnedWindows(), MODELS.map((m) => m.id));
+			MODELS = applyLearnedWindows(MODELS, learned, (id) => matchesAnyOverrideKey(id, providerSettings.modelOverrides));
+			writeLearnedWindows(learned);
 			// Persist the successful discovery globally so a later session
 			// resume (module reload) can recover the real model list even if
 			// discovery fails that time (e.g. SDK subprocess gate is busy).
