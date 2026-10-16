@@ -20,7 +20,7 @@ Restart `pi` if it was already running.
 
 ## Requirements
 
-- **`codebuddy` on your `PATH`** — the extension spawns the same CLI you use standalone. If `which codebuddy` fails, either add it to `PATH` or set `pathToCodebuddyCode` in `codebuddy-sdk.json` (see [Configuration](#configuration)).
+- **`codebuddy` on your `PATH`** — the extension spawns the same CLI you use standalone. If `which codebuddy` fails, either add it to `PATH` or set `pathToCodebuddyCode` in `codebuddy-sdk.json` (see [Configuration](#configuration)). That option selects the CLI entry point only; the JavaScript runtime used to run it comes from the host, and a Bun-compiled host without a `bun` on `PATH` needs `provider.executable` (see below).
 - **CodeBuddy auth already working** — if `codebuddy` works in your terminal, you do not need extra setup for this extension.
 
 ## Quick start (already using CodeBuddy)
@@ -101,7 +101,8 @@ File: `~/.pi/agent/codebuddy-sdk.json` or `.pi/codebuddy-sdk.json` in a project.
 | `askCodebuddy.allowFullMode` | `true` | Allow write-capable delegation mode |
 | `provider.appendSystemPrompt` | `true` | Use Pi's system prompt instead of CodeBuddy's default identity |
 | `provider.strictMcpConfig` | `true` | Use only Pi-bridged MCP tools |
-| `provider.pathToCodebuddyCode` | auto | Path to `codebuddy` when it is **not** on `PATH` |
+| `provider.pathToCodebuddyCode` | auto | Path to the `codebuddy` **CLI entry point** when it is **not** on `PATH`; does not change the JS runtime |
+| `provider.executable` | host runtime | Runtime used to spawn the CLI (e.g. `"node"`). Set it when the host is Bun-compiled (no `bun` on `PATH`); auto-detected otherwise |
 | `provider.contextWindow` | estimated | Override context window (tokens) for **all** models (e.g. `300000`) |
 | `provider.maxTokens` | estimated | Override max output tokens for **all** models (e.g. `32768`) |
 | `provider.modelOverrides` | — | Per-model overrides, keyed by model id or substring (see below) |
@@ -121,6 +122,12 @@ key wins and beats the global `contextWindow` / `maxTokens`:
 ```
 
 Supported per-model keys: `contextWindow`, `maxTokens`, `reasoning`, `images`.
+
+Window values the backend reports for a model are remembered per model id in
+`~/.pi/agent/codebuddy-sdk-learned-windows.json`, so the next start registers the
+last served values instead of the name estimate. Precedence: `modelOverrides` >
+learned > served metadata > estimate. Delete that file to start from estimates
+again (ids the backend no longer serves are dropped automatically).
 
 ## Privacy
 

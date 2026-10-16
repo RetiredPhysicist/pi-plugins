@@ -27,6 +27,11 @@ export interface Config {
 		settingSources?: SettingSource[];
 		strictMcpConfig?: boolean;
 		pathToCodebuddyCode?: string;
+		/**
+		 * Runtime used to spawn the CodeBuddy CLI (e.g. `"node"`). Defaults to the
+		 * host runtime; set this when a Bun-compiled host has no `bun` on `PATH`.
+		 */
+		executable?: string;
 		/** Override the estimated context window (tokens) for ALL models. */
 		contextWindow?: number;
 		/** Override the estimated max output tokens for ALL models. */
