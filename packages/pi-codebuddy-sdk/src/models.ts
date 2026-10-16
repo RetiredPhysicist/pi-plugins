@@ -24,12 +24,28 @@ type SdkModelMeta = {
 	contextWindow?: { supportedLengths?: ReadonlyArray<number>; defaultLength?: number };
 };
 
+// Capabilities are inferred from the model id: this backend returns `{id, name}`
+// only, so there is no metadata to read (unlike the window, capabilities cannot
+// be learned from `modelUsage` either). `modelOverrides.reasoning` / `.images`
+// still win over every hint below.
+//
+// The families cover the CodeBuddy catalog, whose entries are reasoning-only and
+// image-capable apart from the two text-only models called out in
+// `TEXT_ONLY_MODELS`. Reasoning hints stay broad (`glm`, `deepseek`, …) and image
+// hints are version-scoped so an unverified model keeps the conservative default.
+const REASONING_HINTS = /claude|gemini|gpt-5|glm|hy[34]|deepseek|kimi|minimax|step|space/i;
+const IMAGE_HINTS = /claude|gemini|gpt|glm-5[.v]|hy[34]|deepseek-v4|kimi-k[23]|minimax-m[23]|step|space/i;
+// Verified text-only: the CodeBuddy catalog marks both `supportsImages: false`,
+// and a 1x1 PNG probe came back with "the current model doesn't support image
+// reading" from each.
+const TEXT_ONLY_MODELS = new Set(["glm-5.1", "glm-5.2"]);
+
 function detectThinking(id: string): boolean {
-	return /claude|gemini|gpt-5|hy3|deepseek|glm/i.test(id);
+	return REASONING_HINTS.test(id);
 }
 
 function detectImages(id: string): boolean {
-	return /claude|gemini|gpt/i.test(id);
+	return !TEXT_ONLY_MODELS.has(id.toLowerCase()) && IMAGE_HINTS.test(id);
 }
 
 function estimateContext(id: string): number {
