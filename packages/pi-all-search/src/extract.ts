@@ -6,10 +6,27 @@ import { TINYFISH_META, TinyFishProvider } from "./providers/tinyfish.js";
 
 interface FetchDetails {
   url: string;
-  provider: "tinyfish" | "local";
+  provider: "tinyfish" | "jina" | "local";
   length: number;
   contentType?: string;
   error?: string;
+}
+
+const JINA_READER_PREFIX = "https://r.jina.ai/";
+
+/** True if the URL is already a Jina Reader (or search) URL — avoid double-wrapping. */
+export function isJinaUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === "r.jina.ai" || host === "s.jina.ai" || host.endsWith(".jina.ai");
+  } catch {
+    return false;
+  }
+}
+
+/** Build the Jina Reader proxy URL for a target page. */
+export function jinaReaderUrl(url: string): string {
+  return `${JINA_READER_PREFIX}${url}`;
 }
 
 async function fetchWithTinyFish(
@@ -24,6 +41,30 @@ async function fetchWithTinyFish(
   const error = data.errors?.find((e) => e.url === url);
   if (error) return null;
   return { title: page.title ?? undefined, content: page.text };
+}
+
+/** Fetch readable markdown/text via Jina Reader. Returns null on miss so callers can fall through. */
+export async function fetchWithJina(
+  url: string,
+  signal?: AbortSignal,
+): Promise<{ content: string } | null> {
+  if (isJinaUrl(url)) return null;
+
+  const resp = await fetch(jinaReaderUrl(url), {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; PiAllSearch/1.0)",
+      Accept: "text/markdown,text/plain,*/*",
+      "X-Return-Format": "markdown",
+    },
+    signal,
+  });
+
+  if (!resp.ok) return null;
+
+  const text = (await resp.text()).trim();
+  if (!text) return null;
+
+  return { content: text.slice(0, 50000) };
 }
 
 export function registerExtractTool(pi: ExtensionAPI): void {
@@ -63,8 +104,21 @@ export function registerExtractTool(pi: ExtensionAPI): void {
             };
           }
         } catch {
-          // fall through to the local extractor
+          // fall through to Jina Reader
         }
+      }
+
+      try {
+        const jina = await fetchWithJina(url, signal);
+        if (jina?.content) {
+          const details: FetchDetails = { url, provider: "jina", length: jina.content.length };
+          return {
+            content: [{ type: "text", text: jina.content }],
+            details,
+          };
+        }
+      } catch {
+        // fall through to the local extractor
       }
 
       try {
@@ -132,7 +186,8 @@ export function registerExtractTool(pi: ExtensionAPI): void {
       const d = result.details as FetchDetails | undefined;
       if (d?.error) return new Text(theme.fg("error", d.error), 0, 0);
       const len = d?.length ?? 0;
-      const via = d?.provider === "tinyfish" ? " via TinyFish" : "";
+      const via =
+        d?.provider === "tinyfish" ? " via TinyFish" : d?.provider === "jina" ? " via Jina" : "";
       return new Text(theme.fg("success", `✓ ${len} chars fetched${via}`), 0, 0);
     },
   });
