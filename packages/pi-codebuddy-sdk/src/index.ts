@@ -13,6 +13,7 @@ import { buildModels, codebuddyModelId, FALLBACK_MODELS, rawModelsFromSdk, resol
 import { readModelsCache, writeModelsCache } from "./models-cache.js";
 import { clearOwnedStream, providerRegistration } from "./provider-registration.js";
 import { syncServedWindow } from "./served-window.js";
+import { withCliRuntime } from "./cli-runtime.js";
 import { readTranscript } from "./transcript-compat.js";
 import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, buildCodebuddySystemPrompt } from "./skills.js";
 import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
@@ -165,7 +166,7 @@ function installTransportTeardownGuard(sdkQuery: unknown): void {
 
 /** Create an SDK query and immediately arm the transport teardown guard. */
 function startQuery(args: Parameters<typeof query>[0]): ReturnType<typeof query> {
-	const q = query(args);
+	const q = query(withCliRuntime(args, providerSettings.executable));
 	try {
 		installTransportTeardownGuard(q);
 	} catch (err) {
