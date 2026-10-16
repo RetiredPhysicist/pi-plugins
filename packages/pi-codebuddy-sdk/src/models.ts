@@ -87,6 +87,21 @@ export type ModelOverrides = {
  * (matched by exact id first, then case-insensitive substring, longest key
  * wins) and beats the global defaults.
  */
+/**
+ * True when a `modelOverrides` key selects `id`: exact match, or a
+ * case-insensitive substring.
+ */
+export function overrideKeyMatches(id: string, key: string): boolean {
+	const k = key.toLowerCase();
+	return id === key || (k.length > 0 && id.toLowerCase().includes(k));
+}
+
+/** True when any `modelOverrides` key selects `id`. */
+export function matchesAnyOverrideKey(id: string, perModel?: Record<string, unknown>): boolean {
+	if (!perModel) return false;
+	return Object.keys(perModel).some((key) => overrideKeyMatches(id, key));
+}
+
 export function buildModels(
 	models: PiModel[],
 	globalOverrides?: ModelOverrides,
@@ -94,10 +109,8 @@ export function buildModels(
 ): PiModel[] {
 	const sortedKeys = Object.keys(perModel ?? {}).sort((a, b) => b.length - a.length);
 	const match = (id: string): ModelOverrides | undefined => {
-		const lower = id.toLowerCase();
 		for (const key of sortedKeys) {
-			const k = key.toLowerCase();
-			if (id === key || (lower.includes(k) && k.length > 0)) return perModel![key];
+			if (overrideKeyMatches(id, key)) return perModel![key];
 		}
 		return undefined;
 	};
