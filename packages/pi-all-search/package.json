@@ -1,6 +1,6 @@
 {
   "name": "pi-all-search",
-  "version": "1.1.15",
+  "version": "1.1.16",
   "description": "All-in-one web search extension for Pi \u2014 exa, tavily, anysearch, tinyfish, firecrawl, context7",
   "license": "MIT",
   "type": "module",

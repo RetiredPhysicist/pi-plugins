@@ -32,7 +32,7 @@ Or set environment variables: `EXA_API_KEY`, `TAVILY_API_KEY`, `ANYSEARCH_API_KE
 
 Firecrawl works without a key (IP-based free credits). Office NAT / CI sharing an egress IP share the keyless daily credits.
 
-TinyFish Search and Fetch are free with generous rate limits. When `TINYFISH_API_KEY` is set, `web_fetch` renders JavaScript-heavy pages through TinyFish before falling back to the built-in extractor.
+TinyFish Search and Fetch are free with generous rate limits. `web_fetch` tries TinyFish (when `TINYFISH_API_KEY` is set) → [Jina Reader](https://jina.ai/reader) (`r.jina.ai`, no key) → local fetch+extract. Jina is fetch-only; it is not a `web_search` provider.
 
 ## Usage
 
