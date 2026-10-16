@@ -129,3 +129,47 @@ describe("resolveModel", () => {
 		assert.equal(resolveModel(models, "gpt-9"), undefined);
 	});
 });
+
+describe("capability hints", () => {
+	// Every id the CodeBuddy backend serves. All of them are reasoning-only, and
+	// all but glm-5.1 / glm-5.2 accept image input (verified with a 1x1 PNG probe
+	// against the live backend).
+	const SERVED_IDS = [
+		"hy4-preview", "hy3", "hy3-x", "step-5-preview", "space-bunny",
+		"deepseek-v4.1-flash", "glm-5.3", "glm-5.3-flash", "glm-5.3-flashx",
+		"glm-5.2", "glm-5.1", "glm-5v-turbo", "minimax-m3-pay", "minimax-m2.7",
+		"kimi-k3-2", "kimi-k2.8-preview", "kimi-k2.7", "kimi-k2.6", "deepseek-v4-pro",
+	];
+	const TEXT_ONLY = new Set(["glm-5.1", "glm-5.2"]);
+
+	it("marks the served fleet as reasoning and image-capable", () => {
+		const models = rawModelsFromSdk(SERVED_IDS.map((id) => ({ id, name: id })));
+		for (const model of models) {
+			assert.equal(model.reasoning, true, `${model.id} is a reasoning model`);
+			assert.equal(model.input.includes("image"), !TEXT_ONLY.has(model.id), `${model.id} image capability`);
+		}
+	});
+
+	it("keeps unverified models on the conservative defaults", () => {
+		const models = rawModelsFromSdk([
+			{ id: "vendor-chat", name: "Vendor Chat" },
+			{ id: "deepseek-v3-2-volc", name: "DeepSeek V3" },
+			{ id: "hunyuan-chat", name: "Hunyuan Chat" },
+		]);
+		assert.equal(models[0].reasoning, false);
+		assert.deepEqual(models[0].input, ["text"]);
+		// Reasoning stays family-wide, image support is version-scoped.
+		assert.equal(models[1].reasoning, true);
+		assert.deepEqual(models[1].input, ["text"]);
+		assert.equal(models[2].reasoning, false);
+		assert.deepEqual(models[2].input, ["text"]);
+	});
+
+	it("still lets modelOverrides win", () => {
+		const models = buildModels(rawModelsFromSdk([{ id: "glm-5.2", name: "GLM-5.2" }]), undefined, {
+			"glm-5.2": { images: true, reasoning: false },
+		});
+		assert.equal(models[0].input.includes("image"), true);
+		assert.equal(models[0].reasoning, false);
+	});
+});
