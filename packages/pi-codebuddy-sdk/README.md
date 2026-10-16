@@ -123,6 +123,12 @@ key wins and beats the global `contextWindow` / `maxTokens`:
 
 Supported per-model keys: `contextWindow`, `maxTokens`, `reasoning`, `images`.
 
+Window values the backend reports for a model are remembered per model id in
+`~/.pi/agent/codebuddy-sdk-learned-windows.json`, so the next start registers the
+last served values instead of the name estimate. Precedence: `modelOverrides` >
+learned > served metadata > estimate. Delete that file to start from estimates
+again (ids the backend no longer serves are dropped automatically).
+
 ## Privacy
 
 - The extension does **not** send conversation data to this repository or any third-party telemetry endpoint.
