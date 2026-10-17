@@ -125,9 +125,9 @@ export function registerWebSearchTool(pi: ExtensionAPI): void {
     name: "web_search",
     label: "Web Search",
     description:
-      "Search the web with 7 providers (exa, tavily, anysearch, tinyfish, firecrawl, firecrawl-dev, context7). Choose the right provider based on query type. Falls back automatically if the primary provider fails. Use web_fetch for full page content. Use queries (plural) for parallel multi-angle research.",
+      "Search the web with 8 providers (exa, tavily, anysearch, tinyfish, deepseek, firecrawl, firecrawl-dev, context7). Choose the right provider based on query type. Falls back automatically if the primary provider fails. Use web_fetch for full page content. Use queries (plural) for parallel multi-angle research.",
     promptSnippet:
-      "Search the web with automatic or custom routing (set provider='exa' for papers, provider='anysearch' for finance, provider='tavily' for general, provider='tinyfish' for news/current/live results, provider='context7' for docs, provider='firecrawl-dev' for repos/issues/PRs).",
+      "Search the web with automatic or custom routing (set provider='exa' for papers, provider='anysearch' for finance, provider='deepseek' for general/news, provider='tavily' for general, provider='tinyfish' for news/current/live results, provider='context7' for docs, provider='firecrawl-dev' for repos/issues/PRs).",
     get promptGuidelines() {
       return [
         "Use web_search for information beyond your training data — current events, recent docs, live data.",
@@ -136,6 +136,7 @@ export function registerWebSearchTool(pi: ExtensionAPI): void {
         "  • exa — academic research papers, journals, DOIs, scholarly articles, theses",
         "  • anysearch — stock prices, tickers, forex, crypto, CVE vulnerabilities, financial data",
         "  • tinyfish — news, recent/live web results, and academic papers with citations; best when freshness matters",
+        "  • deepseek — DeepSeek Search API; strong for general and news queries (Chinese + English)",
         "  • firecrawl — scraping-heavy sites, code repos, GitHub content, when others fail",
         "  • firecrawl-dev — Firecrawl Developer Index: repo discovery, issues, PRs, OpenAPI specs, skills (semantic, artifact-indexed)",
         "  • tavily — general web search, news, programming guides, fast results (default)",
@@ -156,7 +157,7 @@ export function registerWebSearchTool(pi: ExtensionAPI): void {
         }),
       ),
       provider: Type.Optional(
-        StringEnum(["auto", "exa", "tavily", "anysearch", "tinyfish", "firecrawl", "firecrawl-dev", "context7"], {
+        StringEnum(["auto", "exa", "tavily", "anysearch", "tinyfish", "deepseek", "firecrawl", "firecrawl-dev", "context7"], {
           description:
             "Directly override the search provider. 'auto' uses local intent routing (default).",
           default: "auto",
