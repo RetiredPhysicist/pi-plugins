@@ -1,6 +1,6 @@
 # pi-all-search
 
-**All-in-one web search extension for Pi — exa, tavily, anysearch, tinyfish, firecrawl, context7.**
+**All-in-one web search extension for Pi — exa, tavily, anysearch, tinyfish, deepseek, firecrawl, context7.**
 
 ## Install
 
@@ -19,6 +19,7 @@ Set API keys in `~/.pi/agent/extensions/pi-all-search/config.json`:
     "tavily": "tvly-...",
     "anysearch": "as_sk_...",
     "tinyfish": "sk-tinyfish-...",
+    "deepseek": "sk-...",
     "firecrawl": "fc-...",
     "context7": "ctx7sk_..."
   },
@@ -28,11 +29,13 @@ Set API keys in `~/.pi/agent/extensions/pi-all-search/config.json`:
 }
 ```
 
-Or set environment variables: `EXA_API_KEY`, `TAVILY_API_KEY`, `ANYSEARCH_API_KEY`, `TINYFISH_API_KEY`, `FIRECRAWL_API_KEY`, `CONTEXT7_API_KEY`.
+Or set environment variables: `EXA_API_KEY`, `TAVILY_API_KEY`, `ANYSEARCH_API_KEY`, `TINYFISH_API_KEY`, `DEEPSEEK_API_KEY`, `FIRECRAWL_API_KEY`, `CONTEXT7_API_KEY`.
 
 Firecrawl works without a key (IP-based free credits). Office NAT / CI sharing an egress IP share the keyless daily credits.
 
-TinyFish Search and Fetch are free with generous rate limits. `web_fetch` tries TinyFish (when `TINYFISH_API_KEY` is set) → [Jina Reader](https://jina.ai/reader) (`r.jina.ai`, no key) → local fetch+extract. Jina is fetch-only; it is not a `web_search` provider.
+TinyFish Search and Fetch are free with generous rate limits. `web_fetch` tries **DeepSeek** (when `DEEPSEEK_API_KEY` is set) → TinyFish (when `TINYFISH_API_KEY` is set) → [Jina Reader](https://jina.ai/reader) (`r.jina.ai`, no key) → local fetch+extract. Jina is fetch-only; it is not a `web_search` provider.
+
+DeepSeek Search/Fetch use the same `DEEPSEEK_API_KEY` as the chat API (`POST /v1/tools/search` and `POST /v1/tools/fetch`). Billed per successful request with results (see [DeepSeek Search docs](https://api-docs.deepseek.com/guides/search/)).
 
 ## Usage
 
@@ -43,6 +46,7 @@ web_search({ query: "AAPL stock price", provider: "anysearch" })
 web_search({ query: "rust async programming", provider: "tavily" })
 web_search({ query: "Next.js caching", provider: "context7" })
 web_search({ query: "library for incremental PDF parsing", provider: "firecrawl-dev" })
+web_search({ query: "DeepSeek V4 发布", provider: "deepseek" })
 ```
 
 ## Providers
@@ -53,6 +57,7 @@ web_search({ query: "library for incremental PDF parsing", provider: "firecrawl-
 | **tavily** | General web, programming, fast results | `TAVILY_API_KEY` |
 | **anysearch** | Finance, stocks, structured data | `ANYSEARCH_API_KEY` |
 | **tinyfish** | News, current events, academic papers with citations | `TINYFISH_API_KEY` |
+| **deepseek** | General + news via DeepSeek Search API | `DEEPSEEK_API_KEY` |
 | **firecrawl** | Scraping-heavy sites, fallback | `FIRECRAWL_API_KEY` |
 | **firecrawl-dev** | Firecrawl Developer Index: repo discovery, issues, PRs, OpenAPI specs, skills (semantic artifact index) | `FIRECRAWL_API_KEY` |
 | **context7** | Library/framework/API documentation | `CONTEXT7_API_KEY` |
@@ -60,12 +65,12 @@ web_search({ query: "library for incremental PDF parsing", provider: "firecrawl-
 ## Routing
 
 Automatic intent-based routing:
-- **Finance queries** → anysearch → exa → tavily
-- **Academic queries** → tinyfish → exa → anysearch → tavily
-- **News queries** → tinyfish → tavily → anysearch → exa
-- **General queries** → tavily → tinyfish → anysearch → exa → firecrawl
-- **Docs queries** → context7 → exa → tavily
-- **Technical queries** (github/repo/issue/PR/commit) → firecrawl-dev → firecrawl → exa → tavily
+- **Finance queries** → anysearch → exa → tavily → deepseek
+- **Academic queries** → tinyfish → exa → anysearch → tavily → deepseek
+- **News queries** → deepseek → tinyfish → tavily → anysearch → exa
+- **General queries** → deepseek → tavily → tinyfish → anysearch → exa → firecrawl
+- **Docs queries** → context7 → exa → tavily → deepseek
+- **Technical queries** (github/repo/issue/PR/commit) → firecrawl-dev → firecrawl → exa → tavily → deepseek
 
 Override with `provider="exa"` etc.
 

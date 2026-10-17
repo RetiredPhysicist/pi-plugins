@@ -2,11 +2,12 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { loadConfig, resolveApiKey } from "./config.js";
+import { DEEPSEEK_META, fetchWithDeepSeek } from "./providers/deepseek.js";
 import { TINYFISH_META, TinyFishProvider } from "./providers/tinyfish.js";
 
 interface FetchDetails {
   url: string;
-  provider: "tinyfish" | "jina" | "local";
+  provider: "deepseek" | "tinyfish" | "jina" | "local";
   length: number;
   contentType?: string;
   error?: string;
@@ -72,7 +73,7 @@ export function registerExtractTool(pi: ExtensionAPI): void {
     name: "web_fetch",
     label: "Fetch URL",
     description:
-      "Fetch a URL and extract readable content as markdown. Handles GitHub repos, YouTube videos, PDFs, and regular web pages. Use after web_search to read full page content.",
+      "Fetch a URL and extract readable content as markdown (DeepSeek → TinyFish → Jina → local). Handles GitHub repos, YouTube videos, PDFs, and regular web pages. Use after web_search to read full page content.",
     promptGuidelines: [
       "Use web_fetch after web_search to read full page content when snippets are insufficient.",
       "Use web_fetch when the user provides a URL directly.",
@@ -91,6 +92,22 @@ export function registerExtractTool(pi: ExtensionAPI): void {
       const config = loadConfig();
       const url = params.url;
       const prompt = params.prompt;
+
+      const deepseekKey = resolveApiKey(DEEPSEEK_META.name, DEEPSEEK_META.envVar, config);
+      if (deepseekKey) {
+        try {
+          const page = await fetchWithDeepSeek(url, deepseekKey, signal);
+          if (page?.content) {
+            const details: FetchDetails = { url, provider: "deepseek", length: page.content.length };
+            return {
+              content: [{ type: "text", text: page.content }],
+              details,
+            };
+          }
+        } catch {
+          // fall through to TinyFish
+        }
+      }
 
       const tinyFishKey = resolveApiKey(TINYFISH_META.name, TINYFISH_META.envVar, config);
       if (tinyFishKey) {
@@ -187,7 +204,13 @@ export function registerExtractTool(pi: ExtensionAPI): void {
       if (d?.error) return new Text(theme.fg("error", d.error), 0, 0);
       const len = d?.length ?? 0;
       const via =
-        d?.provider === "tinyfish" ? " via TinyFish" : d?.provider === "jina" ? " via Jina" : "";
+        d?.provider === "deepseek"
+          ? " via DeepSeek"
+          : d?.provider === "tinyfish"
+            ? " via TinyFish"
+            : d?.provider === "jina"
+              ? " via Jina"
+              : "";
       return new Text(theme.fg("success", `✓ ${len} chars fetched${via}`), 0, 0);
     },
   });
