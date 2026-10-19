@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { execSync } from "node:child_process";
-import { describeTask, settleNotification } from "./settle.ts";
+import { describeBeforeAgentStart, settleNotification } from "./settle.ts";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -763,7 +763,7 @@ export default function (pi: ExtensionAPI) {
   // Capture the prompt for the completion notification: `agent_settled` carries
   // no messages, and this is the last point the prompt text is available.
   pi.on("before_agent_start", (event, _ctx) => {
-    lastTaskDescription = describeTask((event as { prompt?: unknown }).prompt);
+    lastTaskDescription = describeBeforeAgentStart(event);
   });
 
   pi.on("agent_start", (_event, ctx) => {
