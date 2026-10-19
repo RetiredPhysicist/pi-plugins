@@ -23,6 +23,32 @@ export function describeTask(prompt: unknown): string | null {
 }
 
 /**
+ * Task text from `before_agent_start`.
+ *
+ * Pi 1.3 also fires this event for runs started by a custom message, where the
+ * event carries `message` instead of `prompt`.
+ */
+export function describeBeforeAgentStart(event: unknown): string | null {
+  if (!event || typeof event !== "object") return null;
+  const { prompt, message } = event as { prompt?: unknown; message?: unknown };
+  const fromPrompt = describeTask(prompt);
+  if (fromPrompt) return fromPrompt;
+  if (!message || typeof message !== "object") return null;
+  const content = (message as { content?: unknown }).content;
+  if (typeof content === "string") return describeTask(content);
+  if (!Array.isArray(content)) return null;
+  const text = content
+    .map((item) =>
+      item && typeof item === "object" && (item as { type?: unknown }).type === "text"
+        ? (item as { text?: unknown }).text
+        : undefined,
+    )
+    .filter((item): item is string => typeof item === "string")
+    .join("\n");
+  return describeTask(text);
+}
+
+/**
  * The notification for a settled run.
  *
  * A cancelled run says so instead of reporting success: `aborted` distinguishes

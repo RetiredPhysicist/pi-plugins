@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { describeTask, settleNotification } from "../extensions/settle.ts";
+import { describeBeforeAgentStart, describeTask, settleNotification } from "../extensions/settle.ts";
 
 describe("describeTask", () => {
   it("takes the first line of the prompt", () => {
@@ -19,6 +19,38 @@ describe("describeTask", () => {
     assert.equal(describeTask("   \n  "), null);
     assert.equal(describeTask(undefined), null);
     assert.equal(describeTask({ text: "hi" }), null);
+  });
+});
+
+describe("describeBeforeAgentStart", () => {
+  it("reads the prompt from a user run", () => {
+    assert.equal(describeBeforeAgentStart({ messageType: "user", prompt: "Fix the build" }), "Fix the build");
+  });
+
+  it("reads text content from a custom-message run", () => {
+    const event = {
+      messageType: "custom",
+      message: { role: "custom", content: [{ type: "text", text: "Review the release\nand tag it" }] },
+    };
+    assert.equal(describeBeforeAgentStart(event), "Review the release");
+  });
+
+  it("reads string content from a custom-message run", () => {
+    const event = {
+      messageType: "custom",
+      message: { role: "custom", content: "Review the release" },
+    };
+    assert.equal(describeBeforeAgentStart(event), "Review the release");
+  });
+
+  it("ignores non-text custom content", () => {
+    assert.equal(
+      describeBeforeAgentStart({
+        messageType: "custom",
+        message: { role: "custom", content: [{ type: "image", data: "..." }] },
+      }),
+      null,
+    );
   });
 });
 
