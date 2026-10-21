@@ -6,7 +6,7 @@ Pi extension that registers **CodeBuddy** as a model provider. You keep using Pi
 
 - Exposes CodeBuddy models in Pi (`codebuddy/...` in `/model`)
 - Bridges Pi tools to the SDK (Pi still executes tools; CodeBuddy only plans and calls them)
-- Forwards Pi's system prompt, skills, and project `AGENTS.md` so the model acts as Pi—not as standalone CodeBuddy Code
+- Forwards Pi's system prompt and skills so the model acts as Pi—not as standalone CodeBuddy Code
 - Supports session resume, compaction, streaming, thinking levels, and images
 - Optional **AskCodebuddy** tool to delegate a focused sub-task to another CodeBuddy call
 
@@ -134,6 +134,7 @@ again (ids the backend no longer serves are dropped automatically).
 - The extension does **not** send conversation data to this repository or any third-party telemetry endpoint.
 - Credentials are handled entirely by the CodeBuddy CLI on your machine.
 - Optional debug mode (`CODEBUDDY_SDK_DEBUG=1`) writes **local** logs under `~/.pi/agent/`; paths are redacted, prompts and tool payloads are not logged. Delete logs when finished.
+- CodeBuddy loads project instructions, `~/.codebuddy/rules/`, and project memory independently of `--setting-sources`; those files can add context that is not part of the Pi session.
 
 ## Troubleshooting
 

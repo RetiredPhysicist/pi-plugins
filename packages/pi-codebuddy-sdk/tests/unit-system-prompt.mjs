@@ -22,25 +22,30 @@ Follow user rules.`;
 
 describe("buildCodebuddySystemPrompt", () => {
 	it("uses Pi identity instead of CodeBuddy default", () => {
-		const result = buildCodebuddySystemPrompt(PI_PROMPT, { includeAgents: false });
+		const result = buildCodebuddySystemPrompt(PI_PROMPT);
 		assert.ok(result?.includes("You are Pi's coding assistant"));
 		assert.ok(result?.includes("mcp__custom_tools__read"));
 		assert.ok(!result?.includes("CodeBuddy Code"));
 	});
 
 	it("rewrites skills read tool inside full prompt", () => {
-		const result = buildCodebuddySystemPrompt(PI_PROMPT, { includeAgents: false });
+		const result = buildCodebuddySystemPrompt(PI_PROMPT);
 		assert.ok(result?.includes("Use the read tool (mcp__custom_tools__read)"));
 		assert.ok(!result?.includes("Use the read tool to load a skill's file\n"));
 	});
 
 	it("includeSkills=false strips skills block", () => {
-		const result = buildCodebuddySystemPrompt(PI_PROMPT, { includeAgents: false, includeSkills: false });
+		const result = buildCodebuddySystemPrompt(PI_PROMPT, { includeSkills: false });
 		assert.ok(result?.includes("You are Pi's coding assistant"));
 		assert.ok(!result?.includes("<available_skills>"));
 	});
 
-	it("undefined prompt with includeAgents=false → undefined", () => {
-		assert.strictEqual(buildCodebuddySystemPrompt(undefined, { includeAgents: false }), undefined);
+	it("undefined prompt → undefined", () => {
+		assert.strictEqual(buildCodebuddySystemPrompt(undefined), undefined);
+	});
+
+	it("does not append project AGENTS.md again", () => {
+		const result = buildCodebuddySystemPrompt(PI_PROMPT);
+		assert.ok(!result?.includes("# CLAUDE.md"));
 	});
 });
