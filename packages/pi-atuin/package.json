@@ -2,7 +2,7 @@
   "name": "pi-atuin",
   "version": "0.1.20",
   "type": "module",
-  "description": "Atuin-style fuzzy history search for pi. Press \u2191 for interactive history.",
+  "description": "Atuin-style fuzzy history search for pi. Press ↑ for interactive history.",
   "license": "MIT",
   "author": "RealAlexandreAI",
   "repository": {
@@ -24,7 +24,9 @@
     "image": "https://raw.githubusercontent.com/RetiredPhysicist/pi-plugins/main/packages/pi-atuin/screenshot.png"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.1.0"
+    "@earendil-works/pi-coding-agent": "^1.3.0",
+    "@earendil-works/pi-ai": "^1.3.0",
+    "@earendil-works/pi-tui": "^1.3.0"
   },
   "devDependencies": {
     "tsx": "^4.23.15",
