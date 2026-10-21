@@ -72,8 +72,7 @@ jobs:
 
       - name: Install
         working-directory: packages/${{ matrix.package }}
-        run: |
-          npm ci --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Typecheck
         working-directory: packages/${{ matrix.package }}

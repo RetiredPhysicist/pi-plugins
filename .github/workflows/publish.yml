@@ -35,8 +35,7 @@ jobs:
 
       - name: Install
         working-directory: ${{ steps.package.outputs.dir }}
-        run: |
-          npm ci --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         working-directory: ${{ steps.package.outputs.dir }}
