@@ -11,12 +11,12 @@ permissions:
 
 jobs:
   changed:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       packages: ${{ steps.pick.outputs.packages }}
       matrix: ${{ steps.pick.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: useblacksmith/checkout@v1
         with:
           fetch-depth: 0
 
@@ -49,13 +49,13 @@ jobs:
   test:
     needs: changed
     if: needs.changed.outputs.packages != ''
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
         package: ${{ fromJSON(needs.changed.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: useblacksmith/checkout@v1
 
       - uses: actions/setup-node@v7
         with:
