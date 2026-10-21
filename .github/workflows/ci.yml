@@ -35,7 +35,11 @@ jobs:
             packages=$(git diff --name-only "$base" HEAD -- packages | cut -d/ -f2 | sort -u | paste -sd, -)
           else
             before="${{ github.event.before }}"
-            if [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            # A rewritten history (force-push) leaves event.before pointing at a
+            # commit this clone does not have, and `git diff` then exits 128.
+            # Treat an unknown base as "everything changed".
+            if [ "$before" = "0000000000000000000000000000000000000000" ] \
+              || ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
               packages=$(find packages -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | paste -sd, -)
             else
               packages=$(git diff --name-only "$before" HEAD -- packages | cut -d/ -f2 | sort -u | paste -sd, -)
