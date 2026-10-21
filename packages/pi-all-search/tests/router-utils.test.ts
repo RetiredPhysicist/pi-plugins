@@ -6,7 +6,7 @@ import { parseDeveloperResults } from "../src/providers/firecrawl-dev.js";
 import type { SearchProvider } from "../src/providers/types.js";
 
 function mockProvider(name: string): SearchProvider {
-  return { id: name } as SearchProvider;
+  return { id: name } as unknown as SearchProvider;
 }
 
 describe("classifyIntent", () => {

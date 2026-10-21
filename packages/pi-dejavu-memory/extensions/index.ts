@@ -341,7 +341,7 @@ export default function (pi: ExtensionAPI): void {
 
     async execute(_toolCallId, params) {
       const data = await callMCP("tools/call", { name: MCP_TOOLS.read, arguments: { uri: params.uri } });
-      return { content: [{ type: "text", text: toolResultText(data, "No content") }] };
+      return { content: [{ type: "text", text: toolResultText(data, "No content") }], details: {} };
     },
 
     renderCall(args, theme) {
@@ -371,7 +371,7 @@ export default function (pi: ExtensionAPI): void {
       if (params.limit !== undefined) args.limit = params.limit;
       if (params.domain) args.domain = params.domain;
       const data = await callMCP("tools/call", { name: MCP_TOOLS.search, arguments: args });
-      return { content: [{ type: "text", text: toolResultText(data, "No results") }] };
+      return { content: [{ type: "text", text: toolResultText(data, "No results") }], details: {} };
     },
 
     renderCall(args, theme) {
@@ -409,7 +409,7 @@ export default function (pi: ExtensionAPI): void {
           ...(params.title ? { title: params.title } : {}),
         },
       });
-      return { content: [{ type: "text", text: toolResultText(data, "Created") }] };
+      return { content: [{ type: "text", text: toolResultText(data, "Created") }], details: {} };
     },
 
     renderCall(args, theme) {
@@ -455,7 +455,7 @@ export default function (pi: ExtensionAPI): void {
       if (params.relation) args.relation = params.relation;
 
       const data = await callMCP("tools/call", { name: MCP_TOOLS.update, arguments: args });
-      return { content: [{ type: "text", text: toolResultText(data, "Updated") }] };
+      return { content: [{ type: "text", text: toolResultText(data, "Updated") }], details: {} };
     },
 
     renderCall(args, theme) {
@@ -484,7 +484,7 @@ export default function (pi: ExtensionAPI): void {
         name: MCP_TOOLS.delete,
         arguments: { uri: params.uri },
       });
-      return { content: [{ type: "text", text: toolResultText(data, "Deleted") }] };
+      return { content: [{ type: "text", text: toolResultText(data, "Deleted") }], details: {} };
     },
 
     renderCall(args, theme) {

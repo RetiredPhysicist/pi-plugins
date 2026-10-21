@@ -62,7 +62,7 @@ const TOOL_WHITELIST = new Set([
   "grep", "ls", "find",
 ]);
 
-function renderToolCounts(tools: ToolRecord[]): string[] {
+function renderToolCounts(tools: ToolRecord[], _theme?: string): string[] {
   const sep = `${COMMENT}│${R}`;
   const completed = tools.filter(t => t.status === "completed" && TOOL_WHITELIST.has(t.name));
   const toolCounts = new Map<string, number>();
@@ -89,7 +89,7 @@ function renderToolCounts(tools: ToolRecord[]): string[] {
   return [`${COMMENT}${"─".repeat(67)}${R}`, rebuilt.join(` ${sep} `)];
 }
 
-function renderAgentActivity(agents: AgentRecord[]): string[] {
+function renderAgentActivity(agents: AgentRecord[], _theme?: string): string[] {
   const sep = `${COMMENT}│${R}`;
   const agentRunning = agents.filter(a => a.status === "running");
   const agentCompleted = agents.filter(a => a.status === "completed");
@@ -110,7 +110,7 @@ function renderAgentActivity(agents: AgentRecord[]): string[] {
   return lines;
 }
 
-function renderWaitingPrompt(waiting: { kind: string; title?: string } | null): string[] {
+function renderWaitingPrompt(waiting: { kind: string; title?: string } | null, _theme?: string): string[] {
   if (!waiting) return [];
   const title = waiting.title
     ? ` ${c(waiting.title.length > 40 ? `${waiting.title.slice(0, 39)}…` : waiting.title, FG)}`

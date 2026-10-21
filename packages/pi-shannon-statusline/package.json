@@ -28,9 +28,11 @@
     "cyberpunk"
   ],
   "scripts": {
-    "test": "node --import tsx --test __tests__/*.test.ts"
+    "test": "node --import tsx --test __tests__/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }
