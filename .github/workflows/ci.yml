@@ -69,7 +69,7 @@ jobs:
       - name: Install
         working-directory: packages/${{ matrix.package }}
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm ci --no-audit --no-fund
 
       - name: Typecheck
         working-directory: packages/${{ matrix.package }}

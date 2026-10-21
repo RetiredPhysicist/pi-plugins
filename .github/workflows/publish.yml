@@ -36,7 +36,7 @@ jobs:
       - name: Install
         working-directory: ${{ steps.package.outputs.dir }}
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm ci --no-audit --no-fund
 
       - name: Build
         working-directory: ${{ steps.package.outputs.dir }}
