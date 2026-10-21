@@ -28,7 +28,7 @@ jobs:
         id: pick
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             packages=$(find packages -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | paste -sd, -)
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
@@ -42,17 +42,25 @@ jobs:
             fi
           fi
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
-          if [ -n "$packages" ]; then
-            json=$(printf '%s' "$packages" | jq -R -c 'split(",")')
-          else
-            json='[]'
-          fi
+          # `cut -d/ -f2` also yields files directly under packages/, which are
+          # not directories and would fail npm ci, so intersect with the real
+          # package dirs. When the intersection is empty — a root-only change —
+          # fall back to every package: an empty matrix is a workflow error, and
+          # skipping the test job let such a push report green with nothing run.
+          json=$(find packages -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort \
+            | jq -R -s -c --arg want "$packages" '
+                (split("\n") | map(select(. != ""))) as $all
+                | ($want | split(",") | map(select(. != ""))) as $changed
+                | ($all - ($all - $changed)) as $hit
+                | if ($hit | length) > 0 then $hit else $all end')
           echo "matrix=$json" >> "$GITHUB_OUTPUT"
           echo "Packages: ${packages:-none}"
 
   test:
     needs: changed
-    if: needs.changed.outputs.packages != ''
+    # Every push must run tests: a root-only change moves no package, and
+    # skipping the matrix made that push report green with nothing executed.
+    # An empty matrix is not valid for fromJSON, so fall back to every package.
     runs-on: blacksmith-2vcpu-ubuntu-2404
     strategy:
       fail-fast: false

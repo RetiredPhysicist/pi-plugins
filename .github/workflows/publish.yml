@@ -13,6 +13,7 @@ jobs:
   publish:
     # npm provenance rejects self-hosted runners, including Blacksmith.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -35,7 +36,25 @@ jobs:
 
       - name: Install
         working-directory: ${{ steps.package.outputs.dir }}
+        env:
+          npm_config_cache: ${{ runner.temp }}/npm-cache
         run: npm ci --no-audit --no-fund
+
+      # A tag must not publish code CI never checked.
+      - name: Typecheck
+        working-directory: ${{ steps.package.outputs.dir }}
+        run: npm run typecheck --if-present
+
+      - name: Test
+        working-directory: ${{ steps.package.outputs.dir }}
+        run: |
+          if npm run | grep -q '^  test:ci$'; then
+            npm run test:ci
+          elif npm run | grep -q '^  test:unit$'; then
+            npm run test:unit
+          else
+            npm test --if-present
+          fi
 
       - name: Build
         working-directory: ${{ steps.package.outputs.dir }}
@@ -43,4 +62,4 @@ jobs:
 
       - name: Publish
         working-directory: ${{ steps.package.outputs.dir }}
-        run: npx npm@latest publish --access public
+        run: npx npm@12 publish --access public
