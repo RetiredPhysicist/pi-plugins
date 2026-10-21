@@ -58,7 +58,7 @@ const SUB_DOMAIN_DB: Record<string, SubDomain[]> = {
   ],
   code: [
     { sub_domain: "code.repository", description: "Code repositories", params: { repo: "" } },
-    { sub_domain: "code.docs", code: "Code documentation", params: { library: "" } },
+    { sub_domain: "code.docs", description: "Code documentation", params: { library: "" } },
   ],
   environment: [
     { sub_domain: "environment.climate", description: "Climate data", params: {} },

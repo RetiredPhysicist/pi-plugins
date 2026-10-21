@@ -32,9 +32,11 @@
     "@earendil-works/pi-tui": "^1.1.0"
   },
   "devDependencies": {
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   },
   "scripts": {
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   }
 }

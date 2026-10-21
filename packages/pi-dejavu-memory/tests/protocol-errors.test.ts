@@ -75,7 +75,7 @@ for (const [tool, params, mcpName] of wrappers) {
     test("success is unchanged", async () => {
       replies = [ok("fine")];
       const r = await run(tool, params);
-      assert.deepEqual(r, { content: [{ type: "text", text: "fine" }] });
+      assert.deepEqual(r, { content: [{ type: "text", text: "fine" }], details: {} });
     });
   });
 }

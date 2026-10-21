@@ -55,7 +55,7 @@ describe("dejavu_create", () => {
   test("success is unchanged", async () => {
     nextResults = [ok("Created: dejavu://a_note (audit 7)")];
     const r = await run("dejavu_create", createParams);
-    assert.deepEqual(r, { content: [{ type: "text", text: "Created: dejavu://a_note (audit 7)" }] });
+    assert.deepEqual(r, { content: [{ type: "text", text: "Created: dejavu://a_note (audit 7)" }], details: {} });
   });
 
   test("empty success still falls back to 'Created'", async () => {

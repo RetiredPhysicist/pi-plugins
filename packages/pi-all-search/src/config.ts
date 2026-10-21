@@ -26,7 +26,7 @@ export function loadConfig(): SearchConfig {
   let maxResults: number | undefined;
 
   try {
-    const config = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+    const config: Partial<SearchConfig> = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
     provider = config.provider;
     cacheTtlMs = config.cacheTtlMs;
     maxResults = config.maxResults;

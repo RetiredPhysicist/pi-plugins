@@ -26,3 +26,7 @@ npm run test:ci 2>/dev/null || npm test --if-present
 ```
 
 CI runs the same commands for the packages a push touched.
+
+`tsc` must resolve from the package's own `node_modules`: a globally
+installed compiler makes `typecheck` pass without checking the versions this
+package actually ships against.
