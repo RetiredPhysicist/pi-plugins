@@ -1630,7 +1630,7 @@ async function promptAndWait(
 			...(disallowedTools.length ? { disallowedTools } : {}),
 			...(effort ? { effort } : {}),
 			systemPrompt: askSystemPrompt,
-			settingSources: ["user", "project"] as SettingSource[],
+			settingSources: [] as SettingSource[],
 			extraArgs,
 			...(resumeSessionId ? { resume: resumeSessionId } : {}),
 			...(options?.isolated ? { persistSession: false } : {}),

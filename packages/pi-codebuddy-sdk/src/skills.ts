@@ -1,8 +1,6 @@
 // Skills block extraction + MCP naming constants.
 // Extracted from index.ts so tests can import without activating the extension.
 
-import { extractAgentsAppend } from "./agents-md.js";
-
 export const MCP_SERVER_NAME = "custom_tools";
 export const MCP_TOOL_PREFIX = `mcp__${MCP_SERVER_NAME}__`;
 
@@ -50,24 +48,11 @@ function applySkillsRewrite(systemPrompt: string): string {
 /** Pi system prompt as CodeBuddy override (replaces default "CodeBuddy Code" identity). */
 export function buildCodebuddySystemPrompt(
 	piSystemPrompt: string | undefined,
-	options?: { includeAgents?: boolean; includeSkills?: boolean },
+	options?: { includeSkills?: boolean },
 ): string | undefined {
-	const parts: string[] = [];
-
-	if (piSystemPrompt) {
-		let prompt = piSystemPrompt;
-		if (options?.includeSkills === false) {
-			prompt = stripSkillsBlock(prompt);
-		} else {
-			prompt = applySkillsRewrite(prompt);
-		}
-		if (prompt) parts.push(prompt);
-	}
-
-	if (options?.includeAgents !== false) {
-		const agents = extractAgentsAppend();
-		if (agents) parts.push(agents);
-	}
-
-	return parts.length > 0 ? parts.join("\n\n") : undefined;
+	if (!piSystemPrompt) return undefined;
+	const prompt = options?.includeSkills === false
+		? stripSkillsBlock(piSystemPrompt)
+		: applySkillsRewrite(piSystemPrompt);
+	return prompt || undefined;
 }
