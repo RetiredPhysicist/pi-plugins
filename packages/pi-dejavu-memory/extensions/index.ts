@@ -6,36 +6,27 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 
 const CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-dejavu-memory", "config.json");
-// Legacy path from the old package name — still read so existing installs don't lose config.
-const LEGACY_CONFIG_PATH = join(homedir(), ".pi", "agent", "extensions", "pi-nocturne-memory", "config.json");
 
 function loadConfig(): { mcpUrl?: string; mcpAuth?: string; mcpHeaders?: Record<string, string> } {
   const env = process.env;
   const result: { mcpUrl?: string; mcpAuth?: string; mcpHeaders?: Record<string, string> } = {};
 
-  // Config file takes priority (new path first, then legacy)
+  // Config file takes priority over environment variables.
   try {
     const fileConfig = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
     result.mcpUrl = fileConfig.mcpUrl;
     result.mcpAuth = fileConfig.mcpAuth;
     result.mcpHeaders = fileConfig.mcpHeaders;
   } catch {
-    try {
-      const fileConfig = JSON.parse(readFileSync(LEGACY_CONFIG_PATH, "utf8"));
-      result.mcpUrl = fileConfig.mcpUrl;
-      result.mcpAuth = fileConfig.mcpAuth;
-      result.mcpHeaders = fileConfig.mcpHeaders;
-    } catch {
-      // use defaults
-    }
+    // use defaults
   }
 
   // Env vars as fallback
-  if (!result.mcpUrl && env.NOCTURNE_MCP_URL) {
-    result.mcpUrl = env.NOCTURNE_MCP_URL;
+  if (!result.mcpUrl && env.DEJAVU_MCP_URL) {
+    result.mcpUrl = env.DEJAVU_MCP_URL;
   }
-  if (!result.mcpAuth && env.NOCTURNE_MCP_AUTH) {
-    result.mcpAuth = env.NOCTURNE_MCP_AUTH;
+  if (!result.mcpAuth && env.DEJAVU_MCP_AUTH) {
+    result.mcpAuth = env.DEJAVU_MCP_AUTH;
   }
 
   return result;
@@ -119,7 +110,7 @@ async function initializeSession(): Promise<string | null> {
 async function callMCP(method: string, params: Record<string, unknown>): Promise<any> {
   if (!MCP_URL) {
     throw new Error(
-      "Noc MCP server not configured. Create ~/.pi/agent/extensions/pi-dejavu-memory/config.json with " +
+      "DejaVu MCP server not configured. Create ~/.pi/agent/extensions/pi-dejavu-memory/config.json with " +
       '{ "mcpUrl": "http://localhost:PORT/mcp", "mcpAuth": "Bearer ..." } — ' +
       "the extension loads fine without it; memory tools activate once configured.",
     );
@@ -273,9 +264,9 @@ export default function (pi: ExtensionAPI): void {
     name: "dejavu_boot",
     label: "Boot Memory",
     description:
-      "Call at session start. Loads system://boot, system://recent/5, system://triggers, then best-effort system://briefing. Afterward read system://focus (recent is a briefing subset). Self-discipline startup protocol.",
+      "Call when the SessionStart hook emits DEJAVU_BOOT_REQUIRED. Loads system://boot, system://recent/5, system://triggers, then best-effort system://briefing. Afterward read system://focus (recent is a briefing subset).",
     promptGuidelines: [
-      "MUST call at session start before any other work.",
+      "When DEJAVU_BOOT_REQUIRED appears, call before any other work; do not call again after a successful boot.",
       "Loads system://boot, system://recent/5, system://triggers, then best-effort system://briefing.",
     ],
     parameters: Type.Object({}),

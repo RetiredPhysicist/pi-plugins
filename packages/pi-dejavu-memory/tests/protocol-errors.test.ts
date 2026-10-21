@@ -24,8 +24,8 @@ const http = (status: number, body: string): Reply => ({ status, body });
 const garbage: Reply = { status: 200, body: "<html>proxy error page</html>" };
 
 before(async () => {
-  process.env.NOCTURNE_MCP_URL = "http://127.0.0.1:1/mcp";
-  process.env.NOCTURNE_MCP_AUTH = "Bearer test-token";
+  process.env.DEJAVU_MCP_URL = "http://127.0.0.1:1/mcp";
+  process.env.DEJAVU_MCP_AUTH = "Bearer test-token";
   globalThis.fetch = (async (_url: string, init: { body: string }) => {
     sent.push(JSON.parse(init.body));
     const r = replies.shift() ?? ok("unexpected call");

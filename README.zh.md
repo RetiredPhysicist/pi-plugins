@@ -24,14 +24,14 @@ pi install npm:<package>
 
 | 包 | 增加的能力 | npm |
 | --- | --- | --- |
-| [pi-all-search](packages/pi-all-search) | `web_search`、`web_fetch`、`get_sub_domains`。提供方：exa、tavily、anysearch、tinyfish、firecrawl、firecrawl-dev、context7。 | [1.1.15](https://www.npmjs.com/package/pi-all-search) |
+| [pi-all-search](packages/pi-all-search) | `web_search`、`web_fetch`、`get_sub_domains`。提供方：exa、tavily、anysearch、tinyfish、firecrawl、firecrawl-dev、context7。 | [1.1.17](https://www.npmjs.com/package/pi-all-search) |
 | [pi-all-tools](packages/pi-all-tools) | 在 Pi 自带的 `read`、`bash`、`edit`、`write` 之外，保持 `find`、`grep`、`ls` 可用。 | [1.1.0](https://www.npmjs.com/package/pi-all-tools) |
-| [pi-all-notification](packages/pi-all-notification) | macOS 通知、[Bark](https://github.com/Finb/Bark)、自定义 webhook。工具：`notify_user`。命令：`/all-notification`。 | [1.0.4](https://www.npmjs.com/package/pi-all-notification) |
+| [pi-all-notification](packages/pi-all-notification) | macOS 通知、[Bark](https://github.com/Finb/Bark)、自定义 webhook。工具：`notify_user`。命令：`/all-notification`。 | [1.0.5](https://www.npmjs.com/package/pi-all-notification) |
 | [pi-atuin](packages/pi-atuin) | 空输入时按 ↑ 对历史提示做模糊搜索。可选 [atuin](https://atuin.sh) 同步。命令：`/atuin record-agent-history`。 | [0.1.20](https://www.npmjs.com/package/pi-atuin) |
-| [pi-cloudflare-browser-run](packages/pi-cloudflare-browser-run) | 通过 [Cloudflare Browser Run](https://developers.cloudflare.com/browser-run/) 提供 `browse`、`screenshot`、`pdf`、`crawl`、`crawl_status`。 | [0.2.9](https://www.npmjs.com/package/pi-cloudflare-browser-run) |
-| [pi-codebuddy-sdk](packages/pi-codebuddy-sdk) | 用本机 `codebuddy` CLI 把 CodeBuddy 模型接进 `/model`。工具：`AskCodebuddy`。 | [0.4.30](https://www.npmjs.com/package/pi-codebuddy-sdk) |
-| [pi-dejavu-memory](packages/pi-dejavu-memory) | 对接 [DejaVu](https://github.com/Dataojitori/nocturne_memory) MCP 服务的记忆工具：`dejavu_boot`、`dejavu_read`、`dejavu_search`、`dejavu_create`、`dejavu_update`、`dejavu_delete`。 | [1.4.0](https://www.npmjs.com/package/pi-dejavu-memory) |
-| [pi-gemini-multimodal](packages/pi-gemini-multimodal) | 通过 Gemini 提供 `media_understand`、`media_transcribe`、`image_generate`、`read_document`。 | [0.1.18](https://www.npmjs.com/package/pi-gemini-multimodal) |
+| [pi-cloudflare-browser-run](packages/pi-cloudflare-browser-run) | 通过 [Cloudflare Browser Run](https://developers.cloudflare.com/browser-run/) 提供 `browse`、`screenshot`、`pdf`、`crawl`、`crawl_status`。 | [0.2.10](https://www.npmjs.com/package/pi-cloudflare-browser-run) |
+| [pi-codebuddy-sdk](packages/pi-codebuddy-sdk) | 用本机 `codebuddy` CLI 把 CodeBuddy 模型接进 `/model`。工具：`AskCodebuddy`。 | [0.4.34](https://www.npmjs.com/package/pi-codebuddy-sdk) |
+| [pi-dejavu-memory](packages/pi-dejavu-memory) | 对接 DejaVu MCP 服务的记忆工具：`dejavu_boot`、`dejavu_read`、`dejavu_search`、`dejavu_create`、`dejavu_update`、`dejavu_delete`。 | [1.4.2](https://www.npmjs.com/package/pi-dejavu-memory) |
+| [pi-gemini-multimodal](packages/pi-gemini-multimodal) | 通过 Gemini 提供 `media_understand`、`media_transcribe`、`image_generate`、`read_document`。 | [0.1.19](https://www.npmjs.com/package/pi-gemini-multimodal) |
 | [pi-shannon-statusline](packages/pi-shannon-statusline) | ANSI 状态 HUD：项目、模型、上下文、吞吐、工具、agent 状态。 | [1.2.0](https://www.npmjs.com/package/pi-shannon-statusline) |
 
 上表版本与本仓库 `package.json` 一致。对应 tag 推出之前，npm 上的版本可能更旧。

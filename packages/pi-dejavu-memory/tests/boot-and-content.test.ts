@@ -12,8 +12,8 @@ let extractText: (d: any) => string;
 let isToolError: (d: any) => boolean;
 
 before(async () => {
-  process.env.NOCTURNE_MCP_URL = "http://127.0.0.1:1/mcp";
-  process.env.NOCTURNE_MCP_AUTH = "Bearer test-token";
+  process.env.DEJAVU_MCP_URL = "http://127.0.0.1:1/mcp";
+  process.env.DEJAVU_MCP_AUTH = "Bearer test-token";
   globalThis.fetch = (async () => {
     const result = results.shift() ?? { content: [{ type: "text", text: "unexpected" }] };
     return new Response(`data: ${JSON.stringify({ jsonrpc: "2.0", id: "x", result })}\n\n`, { status: 200 });

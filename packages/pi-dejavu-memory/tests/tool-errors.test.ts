@@ -19,8 +19,8 @@ function sse(payload: unknown): string {
 }
 
 before(async () => {
-  process.env.NOCTURNE_MCP_URL = "http://127.0.0.1:1/mcp";
-  process.env.NOCTURNE_MCP_AUTH = "Bearer test-token";
+  process.env.DEJAVU_MCP_URL = "http://127.0.0.1:1/mcp";
+  process.env.DEJAVU_MCP_AUTH = "Bearer test-token";
   globalThis.fetch = (async (_url: string, init: { body: string }) => {
     sent.push(JSON.parse(init.body));
     const result = nextResults.shift() ?? { content: [{ type: "text", text: "unexpected call" }] };

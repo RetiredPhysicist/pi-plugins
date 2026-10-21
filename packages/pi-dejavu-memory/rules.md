@@ -1,7 +1,7 @@
 # DejaVu Memory Rules
 
-## Self-Discipline Startup Protocol
-At the start of every new session, the agent MUST call `dejavu_boot` before doing anything else. `dejavu_boot` loads `BOOT_URIS` = `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`. Then read `system://focus` to see which working trees were touched recently and resume the active one. (`system://recent` is already a subset of the briefing — after boot you do not need to read recent again, but boot itself still loads `recent/5`.)
+## Session Startup
+The SessionStart hook emits `DEJAVU_BOOT_REQUIRED`. On that marker, call `dejavu_boot` before other work. `dejavu_boot` loads `BOOT_URIS` = `system://boot`, `system://recent/5`, `system://triggers`, then best-effort `system://briefing`. Then read `system://focus` to see which working trees were touched recently and resume the active one. (`system://recent` is already a subset of the briefing — after boot you do not need to read recent again, but boot itself still loads `recent/5`.) If the marker is absent, do not call `dejavu_boot` speculatively.
 
 ## Mechanism: pull, not push
 Memory is never pushed into context. Only the boot layer is always present; everything else arrives only when you actively `read` or `search`.
@@ -16,7 +16,7 @@ Memory is never pushed into context. Only the boot layer is always present; ever
 ### Reading
 - IF user mentions a topic you should have memory about → `dejavu_read` first
 - IF unsure about a memory URI → use `dejavu_search`; **describe what you need in natural language (concept/意图), not just the exact words** — semantic recall finds memories with no shared keywords (e.g. "部署失败" finds a note about a broken release pipeline); keywords still work, but don't limit yourself to them
-- IF conversation exceeds 15 turns → `dejavu_read` to recalibrate
+- IF conversation exceeds 15 turns or the task topic changes materially → `dejavu_search` to recalibrate
 - IF a disclosure condition in view is triggered → must read immediately
 
 ### Writing
@@ -74,4 +74,4 @@ Your daily loop is 5 tools: `dejavu_read` / `dejavu_search` / `dejavu_create` / 
 - `list_memories`, `add_alias`, `manage_triggers`, `rename_memory`: occasional housekeeping.
 - `rollback_memory` + `list_audit`: recovery after a bad edit — not for routine use.
 - `reindex_vectors`: **operator maintenance, never call it** — it backfills semantic vectors after server upgrades; you have nothing to reindex.
-- `dejavu_boot` is handled by the session hook; call it manually only when the hook did not run.
+- The session hook only emits `DEJAVU_BOOT_REQUIRED`; the agent still calls `dejavu_boot` when it sees that marker. Call it manually only when the hook did not run.

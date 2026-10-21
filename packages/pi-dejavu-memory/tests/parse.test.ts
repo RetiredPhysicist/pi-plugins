@@ -9,8 +9,8 @@ let MCP_TOOLS: { read: string; search: string; create: string; update: string; d
 
 before(async () => {
   // extensions/index.ts requires MCP_URL/MCP_AUTH at module load; satisfy via env
-  process.env.NOCTURNE_MCP_URL = "http://127.0.0.1:1";
-  process.env.NOCTURNE_MCP_AUTH = "test-token";
+  process.env.DEJAVU_MCP_URL = "http://127.0.0.1:1";
+  process.env.DEJAVU_MCP_AUTH = "test-token";
   const mod = await import("../extensions/index.js");
   parseStreamResponse = mod.parseStreamResponse;
   extractText = mod.extractText;

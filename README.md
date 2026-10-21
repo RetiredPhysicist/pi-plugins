@@ -24,14 +24,14 @@ pi install npm:<package>
 
 | Package | What it adds | npm |
 | --- | --- | --- |
-| [pi-all-search](packages/pi-all-search) | `web_search`, `web_fetch`, `get_sub_domains`. Providers: exa, tavily, anysearch, tinyfish, firecrawl, firecrawl-dev, context7. | [1.1.15](https://www.npmjs.com/package/pi-all-search) |
+| [pi-all-search](packages/pi-all-search) | `web_search`, `web_fetch`, `get_sub_domains`. Providers: exa, tavily, anysearch, tinyfish, firecrawl, firecrawl-dev, context7. | [1.1.17](https://www.npmjs.com/package/pi-all-search) |
 | [pi-all-tools](packages/pi-all-tools) | Keeps `find`, `grep`, and `ls` in the tool set, next to Pi's `read`, `bash`, `edit`, and `write`. | [1.1.0](https://www.npmjs.com/package/pi-all-tools) |
-| [pi-all-notification](packages/pi-all-notification) | macOS notification, [Bark](https://github.com/Finb/Bark), and a custom webhook. Tool: `notify_user`. Command: `/all-notification`. | [1.0.4](https://www.npmjs.com/package/pi-all-notification) |
+| [pi-all-notification](packages/pi-all-notification) | macOS notification, [Bark](https://github.com/Finb/Bark), and a custom webhook. Tool: `notify_user`. Command: `/all-notification`. | [1.0.5](https://www.npmjs.com/package/pi-all-notification) |
 | [pi-atuin](packages/pi-atuin) | Up-arrow fuzzy search over previous prompts. Optional [atuin](https://atuin.sh) sync. Command: `/atuin record-agent-history`. | [0.1.20](https://www.npmjs.com/package/pi-atuin) |
-| [pi-cloudflare-browser-run](packages/pi-cloudflare-browser-run) | `browse`, `screenshot`, `pdf`, `crawl`, `crawl_status` through [Cloudflare Browser Run](https://developers.cloudflare.com/browser-run/). | [0.2.9](https://www.npmjs.com/package/pi-cloudflare-browser-run) |
-| [pi-codebuddy-sdk](packages/pi-codebuddy-sdk) | CodeBuddy models in `/model`, via the local `codebuddy` CLI. Tool: `AskCodebuddy`. | [0.4.30](https://www.npmjs.com/package/pi-codebuddy-sdk) |
-| [pi-dejavu-memory](packages/pi-dejavu-memory) | Memory tools against a [DejaVu](https://github.com/Dataojitori/nocturne_memory) MCP server: `dejavu_boot`, `dejavu_read`, `dejavu_search`, `dejavu_create`, `dejavu_update`, `dejavu_delete`. | [1.4.0](https://www.npmjs.com/package/pi-dejavu-memory) |
-| [pi-gemini-multimodal](packages/pi-gemini-multimodal) | `media_understand`, `media_transcribe`, `image_generate`, `read_document` through Gemini. | [0.1.18](https://www.npmjs.com/package/pi-gemini-multimodal) |
+| [pi-cloudflare-browser-run](packages/pi-cloudflare-browser-run) | `browse`, `screenshot`, `pdf`, `crawl`, `crawl_status` through [Cloudflare Browser Run](https://developers.cloudflare.com/browser-run/). | [0.2.10](https://www.npmjs.com/package/pi-cloudflare-browser-run) |
+| [pi-codebuddy-sdk](packages/pi-codebuddy-sdk) | CodeBuddy models in `/model`, via the local `codebuddy` CLI. Tool: `AskCodebuddy`. | [0.4.34](https://www.npmjs.com/package/pi-codebuddy-sdk) |
+| [pi-dejavu-memory](packages/pi-dejavu-memory) | Memory tools against a DejaVu MCP server: `dejavu_boot`, `dejavu_read`, `dejavu_search`, `dejavu_create`, `dejavu_update`, `dejavu_delete`. | [1.4.2](https://www.npmjs.com/package/pi-dejavu-memory) |
+| [pi-gemini-multimodal](packages/pi-gemini-multimodal) | `media_understand`, `media_transcribe`, `image_generate`, `read_document` through Gemini. | [0.1.19](https://www.npmjs.com/package/pi-gemini-multimodal) |
 | [pi-shannon-statusline](packages/pi-shannon-statusline) | ANSI status HUD: project, model, context, throughput, tools, agent state. | [1.2.0](https://www.npmjs.com/package/pi-shannon-statusline) |
 
 Versions above match `package.json` in this tree. npm may be behind until that version's tag is pushed.
