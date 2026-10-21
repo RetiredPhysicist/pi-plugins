@@ -16,6 +16,8 @@ concurrency:
 jobs:
   changed:
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    # Bound each job so a hung npm step cannot hold a Blacksmith runner.
+    timeout-minutes: 20
     outputs:
       packages: ${{ steps.pick.outputs.packages }}
       matrix: ${{ steps.pick.outputs.matrix }}
@@ -66,6 +68,8 @@ jobs:
     # skipping the matrix made that push report green with nothing executed.
     # An empty matrix is not valid for fromJSON, so fall back to every package.
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    # Bound each job so a hung npm step cannot hold a Blacksmith runner.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:

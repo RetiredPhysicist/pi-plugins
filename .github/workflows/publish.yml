@@ -5,6 +5,11 @@ on:
     tags:
       - "pi-*-v*"
 
+# Two tags pushed together would otherwise publish in parallel.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   id-token: write
