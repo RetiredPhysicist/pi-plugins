@@ -1,6 +1,6 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, writeFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -15,6 +15,9 @@ const ORIGINAL_PATH = join(homedir(), ".pi", "agent", "pi-history.jsonl");
 
 describe("JSONL read/write", () => {
 	const testPath = join(homedir(), ".pi", "agent", "pi-history-test.jsonl");
+	before(async () => {
+		await mkdir(join(homedir(), ".pi", "agent"), { recursive: true });
+	});
 
 	after(async () => {
 		try { await unlink(testPath); } catch {}
