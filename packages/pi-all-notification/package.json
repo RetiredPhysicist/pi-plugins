@@ -1,6 +1,6 @@
 {
   "name": "pi-all-notification",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Multi-channel notification for pi: macOS desktop, Bark push, custom webhook",
   "keywords": [
     "pi-package",
