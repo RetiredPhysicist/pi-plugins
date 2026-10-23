@@ -207,10 +207,6 @@ type ContentBlockParam =
 	| { type: "image"; source: { type: "base64"; media_type: string; data: string } };
 type SettingSource = "user" | "project" | "local";
 
-function resolveModel(input: string) {
-	return _resolveModel(MODELS, input);
-}
-
 function registerCodebuddyProvider(pi: ExtensionAPI, globals: Record<symbol, any> = globalThis as Record<symbol, any>): void {
 	const { streamFn, claimStream } = providerRegistration(globals, streamCodebuddySdk, boundRuntime);
 	pi.registerProvider(PROVIDER_ID, {
@@ -728,6 +724,7 @@ export const __test = {
 		return sharedSession;
 	},
 	syncSharedSession,
+	promptAndWait,
 };
 
 // --- Provider helpers: tool name mapping ---
@@ -1571,12 +1568,12 @@ async function promptAndWait(
 		isolated?: boolean;
 		context?: Context["messages"];
 	},
+	runQuery: typeof startQuery = startQuery,
 ): Promise<{ responseText: string; stopReason: string }> {
 	const cwd = process.cwd();
-	const requestedModel = options?.model ?? "opus";
-	const model = resolveModel(requestedModel);
+	const requestedModel = options?.model;
+	const model = requestedModel === undefined ? undefined : _resolveModel(MODELS, requestedModel);
 	const modelId = model?.id ?? requestedModel;
-	const cliModel = model ? codebuddyModelId(model) : modelId;
 
 	// Session resume for shared mode — reuse provider's session if it exists,
 	// otherwise create one from pi's context.
@@ -1613,15 +1610,15 @@ async function promptAndWait(
 
 	const extraArgs: Record<string, string | null> = {
 		"strict-mcp-config": null,
-		model: cliModel,
+		...(modelId !== undefined ? { model: modelId } : {}),
 	};
 
 	debug("askCodebuddy:",
-		`mode=${mode} model=${modelId} cliModel=${cliModel} effort=${effort ?? "default"}`,
+		`mode=${mode} model=${modelId ?? "CLI default"} effort=${effort ?? "default"}`,
 		`isolated=${options?.isolated ?? false} resume=${resumeSessionId?.slice(0, 8) ?? "none"}`,
 		`sysPrompt=${Boolean(askSystemPrompt)} promptLen=${prompt.length}`);
 
-	const sdkQuery = startQuery({
+	const sdkQuery = runQuery({
 		prompt,
 		options: {
 			cwd,
@@ -1699,6 +1696,10 @@ async function promptAndWait(
 					if (!responseText && message.subtype === "success" && message.result) {
 						responseText = message.result;
 					}
+					if (r.is_error || message.subtype !== "success") {
+						const failure = [responseText, r.result, ...(r.errors ?? [])].filter(Boolean).join("\n");
+						throw new Error(failure || `CodeBuddy query failed (${message.subtype}).`);
+					}
 					break;
 				}
 			}
@@ -1710,6 +1711,13 @@ async function promptAndWait(
 			`sdkMessages=${sdkMessageCount} textDeltas=${textDeltaCount} responseLen=${responseText.length}`,
 			`toolCalls=${toolCalls.size}`);
 		return { responseText, stopReason };
+	} catch (err) {
+		const message = errorMessage(err);
+		const unavailableModel = /model\s*\[([^\]]+)\]\s*service info not found/i.exec(message);
+		if (unavailableModel) {
+			throw new Error(`CodeBuddy model "${unavailableModel[1]}" is unavailable for this account. Choose a model ID supported by your CodeBuddy account, or omit model to use the CLI's account default.\n${message}`);
+		}
+		throw err;
 	} finally {
 		signal?.removeEventListener("abort", onAbort);
 		endQuery(sdkQuery, "askCodebuddy", { log: debug });
@@ -1903,11 +1911,11 @@ export default async function (pi: ExtensionAPI) {
 
 	if (askConf?.enabled !== false) {
 		const askCodebuddyParams = Type.Object({
-			prompt: Type.String({ description: "The question or task for CodeBuddy. By default Claude sees the full conversation history. Don't research up front, let Claude explore." }),
+			prompt: Type.String({ description: "The question or task for CodeBuddy. By default CodeBuddy sees the full conversation history. Don't research up front, let CodeBuddy explore." }),
 			mode: Type.Optional(StringEnum(modeValues, { description: modeDesc })),
-			model: Type.Optional(Type.String({ description: 'Claude model (e.g. "opus", "sonnet", "haiku", or full ID). Defaults to "opus".' })),
+			model: Type.Optional(Type.String({ description: "CodeBuddy model ID supported by your account. Omit to use the CLI's account default." })),
 			thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, { description: "Thinking effort level. Omit to use CodeBuddy's default." })),
-			isolated: Type.Optional(Type.Boolean({ description: "When true, Claude sees only this prompt (clean session). When false (default), Claude sees the full conversation history." })),
+			isolated: Type.Optional(Type.Boolean({ description: "When true, CodeBuddy sees only this prompt (clean session). When false (default), CodeBuddy sees the full conversation history." })),
 		});
 		pi.registerTool<typeof askCodebuddyParams>({
 			name: askConf?.name ?? "AskCodebuddy",
