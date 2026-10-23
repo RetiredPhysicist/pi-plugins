@@ -95,6 +95,9 @@ export type ModelOverrides = {
 	maxTokens?: number;
 	reasoning?: boolean;
 	images?: boolean;
+	// Pi thinking level -> provider-native effort. Pi only offers `xhigh`/`max`
+	// when the key is present here (pi-ai `getSupportedThinkingLevels`).
+	thinkingLevelMap?: Record<string, string>;
 };
 
 /**
@@ -137,12 +140,16 @@ export function buildModels(
 		const input: ("text" | "image")[] = o.images === undefined
 			? m.input
 			: (o.images ? ["text", "image"] as const : ["text"] as const);
+		const thinkingLevelMap = o.thinkingLevelMap
+			? { ...(m.thinkingLevelMap ?? {}), ...o.thinkingLevelMap }
+			: m.thinkingLevelMap;
 		return {
 			...m,
 			contextWindow,
 			maxTokens,
 			reasoning: o.reasoning ?? m.reasoning,
 			input,
+			...(thinkingLevelMap ? { thinkingLevelMap } : {}),
 			cost: m.cost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		};
 	});

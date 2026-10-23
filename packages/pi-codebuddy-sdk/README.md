@@ -121,7 +121,27 @@ key wins and beats the global `contextWindow` / `maxTokens`:
 }
 ```
 
-Supported per-model keys: `contextWindow`, `maxTokens`, `reasoning`, `images`.
+Supported per-model keys: `contextWindow`, `maxTokens`, `reasoning`, `images`,
+`thinkingLevelMap`.
+
+`thinkingLevelMap` maps a pi thinking level to the effort string sent to the
+CodeBuddy CLI. pi only offers `xhigh` and `max` when a model declares them here
+(pi-ai `getSupportedThinkingLevels`), so a model that supports `max` upstream
+stays unreachable until the map names it:
+
+```json
+{
+  "provider": {
+    "modelOverrides": {
+      "deepseek-v4.1-flash": { "thinkingLevelMap": { "max": "max" } },
+      "space-bunny": { "thinkingLevelMap": { "xhigh": "xhigh", "max": "max" } }
+    }
+  }
+}
+```
+
+Declare only the habits the model actually serves — an effort the backend
+rejects fails the turn.
 
 Window values the backend reports for a model are remembered per model id in
 `~/.pi/agent/codebuddy-sdk-learned-windows.json`, so the next start registers the
