@@ -119,6 +119,13 @@ describe("codebuddyModelId", () => {
 });
 
 describe("resolveModel", () => {
+	it("keeps Claude family shorthands when the discovered catalog serves them", () => {
+		const models = ["opus", "sonnet", "haiku"].map((family) => ({ id: `claude-${family}-4` }));
+		for (const family of ["opus", "sonnet", "haiku"]) {
+			assert.equal(resolveModel(models, family)?.id, `claude-${family}-4`);
+		}
+	});
+
 	const models = buildModels(FALLBACK_MODELS);
 
 	it("resolves by partial id", () => {
