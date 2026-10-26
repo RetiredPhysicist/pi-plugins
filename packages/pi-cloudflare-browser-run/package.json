@@ -34,6 +34,9 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
+  "overrides": {
+    "undici": "^8.12.3"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/RetiredPhysicist/pi-plugins.git",
