@@ -102,6 +102,29 @@ describe("buildModels", () => {
 		assert.deepEqual(models[1].input, ["text"]); // images=false
 	});
 
+	it("applies a thinkingLevelMap override without inventing a map otherwise", () => {
+		const models = buildModels(
+			rawModelsFromSdk([
+				{ value: "deepseek-v4.1-flash", displayName: "Flash", description: "" },
+				{ value: "hy4-preview", displayName: "Hy4", description: "" },
+			]),
+			undefined,
+			{ "deepseek-v4.1-flash": { thinkingLevelMap: { max: "max" } } },
+		);
+		// pi only offers xhigh/max when the model declares them.
+		assert.deepEqual(models[0].thinkingLevelMap, { max: "max" });
+		assert.equal(models[1].thinkingLevelMap, undefined);
+	});
+
+	it("merges a thinkingLevelMap override with an existing map", () => {
+		const models = buildModels(
+			[{ id: "space-bunny", name: "Space", reasoning: true, input: ["text"], contextWindow: 131_072, maxTokens: 8_192, thinkingLevelMap: { low: "low" }, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
+			undefined,
+			{ "space-bunny": { thinkingLevelMap: { xhigh: "xhigh", max: "max" } } },
+		);
+		assert.deepEqual(models[0].thinkingLevelMap, { low: "low", xhigh: "xhigh", max: "max" });
+	});
+
 	it("matches per-model override by substring (longest key wins)", () => {
 		const models = buildModels(
 			rawModelsFromSdk([{ value: "gpt-5-max", displayName: "M", description: "" }]),

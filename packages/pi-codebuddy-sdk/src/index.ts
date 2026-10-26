@@ -907,7 +907,7 @@ function syncServedContextWindow(label: string, message: CbMessage, model: Model
 // Pi reasoning levels → CC SDK effort levels
 
 const REASONING_TO_EFFORT: Record<string, Effort> = {
-	minimal: "low", low: "low", medium: "medium", high: "high", xhigh: "xhigh",
+	minimal: "low", low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "max",
 };
 
 // --- Provider helpers: misc ---
@@ -1914,7 +1914,7 @@ export default async function (pi: ExtensionAPI) {
 			prompt: Type.String({ description: "The question or task for CodeBuddy. By default CodeBuddy sees the full conversation history. Don't research up front, let CodeBuddy explore." }),
 			mode: Type.Optional(StringEnum(modeValues, { description: modeDesc })),
 			model: Type.Optional(Type.String({ description: "CodeBuddy model ID supported by your account. Omit to use the CLI's account default." })),
-			thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, { description: "Thinking effort level. Omit to use CodeBuddy's default." })),
+			thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const, { description: "Thinking effort level. Omit to use CodeBuddy's default." })),
 			isolated: Type.Optional(Type.Boolean({ description: "When true, CodeBuddy sees only this prompt (clean session). When false (default), CodeBuddy sees the full conversation history." })),
 		});
 		pi.registerTool<typeof askCodebuddyParams>({
