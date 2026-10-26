@@ -20,7 +20,7 @@ import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, buildCodebuddySystemPrompt } from "./
 import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
 import { extractAllToolResults as _extractAllToolResults, type McpResult } from "./extract-tool-results.js";
 import { QueryContext, ctx } from "./query-state.js";
-import { loadConfig, type Config } from "./config.js";
+import { buildCodebuddyEnv, loadConfig, resolveCodebuddyConfigDir, type Config } from "./config.js";
 import { jsonSchemaToZodShape } from "./typebox-to-zod.js";
 import { buildActionSummary, type ToolCallState } from "./askcodebuddy-ui.js";
 import { withSdkGate } from "./sdk-gate.js";
@@ -443,7 +443,7 @@ async function runIsolatedSummary(
 			prompt: promptText,
 			options: {
 				cwd,
-				env: { ...process.env, DISABLE_AUTO_COMPACT: "1" },
+				env: buildCodebuddyEnv(loadConfig(cwd).provider),
 				tools: [],
 				strictMcpConfig: true,
 				settingSources: [] as SettingSource[],
@@ -558,7 +558,7 @@ function verifyWrittenSession(
 			`. Report: ${ISSUES_URL}`,
 			"warning",
 		);
-		diagDump("session_verify_fail", { msg, jsonlPath, cwd, realpath: safeRealpath(cwd), codebuddyConfigDir: process.env.CODEBUDDY_CONFIG_DIR ?? null });
+		diagDump("session_verify_fail", { msg, jsonlPath, cwd, realpath: safeRealpath(cwd), codebuddyConfigDir: resolveCodebuddyConfigDir(providerSettings) ?? null });
 	}
 }
 
@@ -687,11 +687,11 @@ function syncSharedSession(
 	const preserveId = previousSessionId !== undefined && !sharedSession?.forceRotate;
 	if (preserveId) {
 		// Wipe prior jsonl + companion dir (no-op if nothing to wipe).
-		deleteSession(previousSessionId!, cwd, process.env.CODEBUDDY_CONFIG_DIR);
+		deleteSession(previousSessionId!, cwd, resolveCodebuddyConfigDir(providerSettings));
 	}
 	const session = createSession({
 		projectPath: cwd,
-		codebuddyDir: process.env.CODEBUDDY_CONFIG_DIR,
+		codebuddyDir: resolveCodebuddyConfigDir(providerSettings),
 		...(preserveId ? { sessionId: previousSessionId } : {}),
 		...(modelId ? { model: modelId } : {}),
 	});
@@ -722,6 +722,9 @@ export const __test = {
 	},
 	getSharedSession() {
 		return sharedSession;
+	},
+	setProviderSettings(settings: NonNullable<Config["provider"]>) {
+		providerSettings = settings;
 	},
 	syncSharedSession,
 	promptAndWait,
@@ -1396,7 +1399,7 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 	const extraArgs: Record<string, string | null> = { model: cliModel };
 	if (strictMcpConfigEnabled) extraArgs["strict-mcp-config"] = null;
 
-	const childEnv = { ...process.env, DISABLE_AUTO_COMPACT: "1" };
+	const childEnv = buildCodebuddyEnv(providerSettings);
 	const queryOptions: NonNullable<Parameters<typeof query>[0]["options"]> = {
 		cwd,
 		env: childEnv,
@@ -1469,7 +1472,7 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 			const sessionId = capturedSessionId ?? sharedSession?.sessionId;
 			if (syncResult.preserveSharedSession) {
 				if (capturedSessionId && capturedSessionId !== sharedSession?.sessionId) {
-					deleteSession(capturedSessionId, cwd, process.env.CODEBUDDY_CONFIG_DIR);
+					deleteSession(capturedSessionId, cwd, resolveCodebuddyConfigDir(providerSettings));
 					debug(`provider: query done, deleted ephemeral session ${capturedSessionId.slice(0, 8)} to preserve shared session`);
 				}
 				debug(`provider: query done, ignoring captured session ${capturedSessionId?.slice(0, 8) ?? "none"} to preserve shared session`);
@@ -1622,7 +1625,7 @@ async function promptAndWait(
 		prompt,
 		options: {
 			cwd,
-			env: { ...process.env, DISABLE_AUTO_COMPACT: "1" },
+			env: buildCodebuddyEnv(providerSettings),
 			permissionMode: "bypassPermissions",
 			...(disallowedTools.length ? { disallowedTools } : {}),
 			...(effort ? { effort } : {}),
@@ -1742,7 +1745,16 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 	await withSdkGate(async () => {
 		let q: ReturnType<typeof startQuery> | undefined;
 		try {
-			q = startQuery({ prompt: " ", options: { maxTurns: 0, permissionMode: "bypassPermissions", tools: [] } });
+			q = startQuery({
+				prompt: " ",
+				options: {
+					maxTurns: 0,
+					permissionMode: "bypassPermissions",
+					tools: [],
+					env: buildCodebuddyEnv(providerSettings),
+					...(providerSettings.pathToCodebuddyCode ? { pathToCodebuddyCode: providerSettings.pathToCodebuddyCode } : {}),
+				},
+			});
 			const supported = await q.supportedModels();
 			await q.return().catch(() => {});
 			if (!supported.length) return;

@@ -103,6 +103,8 @@ File: `~/.pi/agent/codebuddy-sdk.json` or `.pi/codebuddy-sdk.json` in a project.
 | `provider.strictMcpConfig` | `true` | Use only Pi-bridged MCP tools |
 | `provider.pathToCodebuddyCode` | auto | Path to the `codebuddy` **CLI entry point** when it is **not** on `PATH`; does not change the JS runtime |
 | `provider.executable` | host runtime | Runtime used to spawn the CLI (e.g. `"node"`). Set it when the host is Bun-compiled (no `bun` on `PATH`); auto-detected otherwise |
+| `provider.isolatedEnv` | `false` | Opt in to a private CodeBuddy config dir with user, auto, and team memory disabled |
+| `provider.codebuddyConfigDir` | `~/.codebuddy-cli-isolated` | Config dir used when `isolatedEnv` is enabled |
 | `provider.contextWindow` | estimated | Override context window (tokens) for **all** models (e.g. `300000`) |
 | `provider.maxTokens` | estimated | Override max output tokens for **all** models (e.g. `32768`) |
 | `provider.modelOverrides` | — | Per-model overrides, keyed by model id or substring (see below) |
@@ -143,6 +145,21 @@ stays unreachable until the map names it:
 Declare only the habits the model actually serves — an effort the backend
 rejects fails the turn.
 
+Set `provider.isolatedEnv` to keep Pi turns away from the CodeBuddy IDE's rules,
+projects, and memory. The extension sends both the CLI subprocess and its own
+session files to one config dir:
+
+```json
+{
+  "provider": {
+    "isolatedEnv": true,
+    "codebuddyConfigDir": "/path/to/private-codebuddy-config"
+  }
+}
+```
+
+The first run against a new dir needs the CodeBuddy CLI login for that dir.
+
 Window values the backend reports for a model are remembered per model id in
 `~/.pi/agent/codebuddy-sdk-learned-windows.json`, so the next start registers the
 last served values instead of the name estimate. Precedence: `modelOverrides` >
@@ -154,7 +171,7 @@ again (ids the backend no longer serves are dropped automatically).
 - The extension does **not** send conversation data to this repository or any third-party telemetry endpoint.
 - Credentials are handled entirely by the CodeBuddy CLI on your machine.
 - Optional debug mode (`CODEBUDDY_SDK_DEBUG=1`) writes **local** logs under `~/.pi/agent/`; paths are redacted, prompts and tool payloads are not logged. Delete logs when finished.
-- CodeBuddy loads project instructions, `~/.codebuddy/rules/`, and project memory independently of `--setting-sources`; those files can add context that is not part of the Pi session.
+- CodeBuddy loads project instructions, rules, and project memory independently of `--setting-sources`; those files can add context that is not part of the Pi session. Set `provider.isolatedEnv` to use a private config dir with memory disabled.
 
 ## Troubleshooting
 

@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
-import { loadConfig } from "../src/config.js";
+import { buildCodebuddyEnv, loadConfig, resolveCodebuddyConfigDir } from "../src/config.js";
 
 function withTempHome(fn) {
 	const oldHome = process.env.HOME;
@@ -63,4 +63,32 @@ describe("loadConfig", () => {
 			rmSync(cwd, { recursive: true, force: true });
 		}
 	}));
+});
+
+describe("isolated CodeBuddy environment", () => {
+	it("stays opt-in", () => {
+		assert.equal(resolveCodebuddyConfigDir(undefined), undefined);
+		assert.equal(resolveCodebuddyConfigDir({}), undefined);
+		assert.equal(resolveCodebuddyConfigDir({ isolatedEnv: false }), undefined);
+		assert.equal(buildCodebuddyEnv({}, {}).CODEBUDDY_CONFIG_DIR, undefined);
+		assert.equal(buildCodebuddyEnv({}, {}).CODEBUDDY_MEMORY_ENABLED, undefined);
+	});
+
+	it("uses one private config dir and disables every memory source", () => withTempHome((home) => {
+		const provider = { isolatedEnv: true };
+		assert.equal(resolveCodebuddyConfigDir(provider), join(home, ".codebuddy-cli-isolated"));
+		assert.deepEqual(buildCodebuddyEnv(provider, {}), {
+			DISABLE_AUTO_COMPACT: "1",
+			CODEBUDDY_CONFIG_DIR: join(home, ".codebuddy-cli-isolated"),
+			CODEBUDDY_MEMORY_ENABLED: "0",
+			CODEBUDDY_DISABLE_AUTO_MEMORY: "1",
+			CODEBUDDY_TEAM_MEMORY_ENABLED: "0",
+		});
+	}));
+
+	it("honours a custom config dir", () => {
+		const provider = { isolatedEnv: true, codebuddyConfigDir: "/tmp/codebuddy-pi-test" };
+		assert.equal(resolveCodebuddyConfigDir(provider), "/tmp/codebuddy-pi-test");
+		assert.equal(buildCodebuddyEnv(provider, {}).CODEBUDDY_CONFIG_DIR, "/tmp/codebuddy-pi-test");
+	});
 });

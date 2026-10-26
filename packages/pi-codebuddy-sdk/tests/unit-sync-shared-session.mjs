@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getSessionPath, projectPathToHash } from "../src/cb-session-io.js";
 
 const debugDir = mkdtempSync(join(tmpdir(), "sync-shared-session-debug-"));
 process.env.CODEBUDDY_SDK_DEBUG_PATH = join(debugDir, "codebuddy-sdk.log");
@@ -103,6 +104,32 @@ describe("syncSharedSession", () => {
 			if (previousConfigDir === undefined) delete process.env.CODEBUDDY_CONFIG_DIR;
 			else process.env.CODEBUDDY_CONFIG_DIR = previousConfigDir;
 			rmSync(cwd, { recursive: true, force: true });
+		}
+	});
+
+	it("uses configured isolated storage for session and diff cleanup paths", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "sync-shared-session-isolated-"));
+		const isolatedDir = mkdtempSync(join(tmpdir(), "sync-shared-session-config-"));
+		try {
+			__test.setProviderSettings({ isolatedEnv: true, codebuddyConfigDir: isolatedDir });
+			const prior = [
+				{ role: "user", content: "first", timestamp: Date.now() },
+				{ role: "assistant", content: "answer", timestamp: Date.now() },
+			];
+			const result = __test.syncSharedSession(
+				[...prior, { role: "user", content: "next", timestamp: Date.now() }],
+				cwd,
+			);
+			assert.ok(result.sessionId);
+			assert.equal(__test.getSharedSession()?.sessionId, result.sessionId);
+			assert.equal(
+				getSessionPath(result.sessionId, cwd, isolatedDir),
+				join(isolatedDir, "projects", projectPathToHash(cwd), `${result.sessionId}.jsonl`),
+			);
+		} finally {
+			__test.setProviderSettings({});
+			rmSync(cwd, { recursive: true, force: true });
+			rmSync(isolatedDir, { recursive: true, force: true });
 		}
 	});
 

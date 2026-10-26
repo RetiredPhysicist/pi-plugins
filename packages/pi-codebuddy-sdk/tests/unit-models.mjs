@@ -3,6 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { getSupportedThinkingLevels } from "@earendil-works/pi-ai/models";
 import { buildModels, codebuddyModelId, rawModelsFromSdk, resolveModel, FALLBACK_MODELS } from "../src/models.js";
 
 describe("rawModelsFromSdk", () => {
@@ -123,6 +124,19 @@ describe("buildModels", () => {
 			{ "space-bunny": { thinkingLevelMap: { xhigh: "xhigh", max: "max" } } },
 		);
 		assert.deepEqual(models[0].thinkingLevelMap, { low: "low", xhigh: "xhigh", max: "max" });
+	});
+
+	it("exposes configured extended levels through Pi's level picker", () => {
+		const models = buildModels(
+			rawModelsFromSdk([{ id: "space-bunny", name: "Space" }]),
+			undefined,
+			{ "space-bunny": { thinkingLevelMap: { xhigh: "xhigh", max: "max" } } },
+		);
+		assert.deepEqual(
+			getSupportedThinkingLevels(models[0]),
+			["off", "minimal", "low", "medium", "high", "xhigh", "max"],
+		);
+		assert.equal(getSupportedThinkingLevels(models[0]).includes("max"), true);
 	});
 
 	it("matches per-model override by substring (longest key wins)", () => {

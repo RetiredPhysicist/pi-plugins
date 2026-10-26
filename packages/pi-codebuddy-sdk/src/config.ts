@@ -1,4 +1,5 @@
 import type { SettingSource } from "./index-types.js";
+import type { ModelOverrides } from "./models.js";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import { existsSync, readFileSync } from "fs";
 import { homedir } from "os";
@@ -32,17 +33,37 @@ export interface Config {
 		 * host runtime; set this when a Bun-compiled host has no `bun` on `PATH`.
 		 */
 		executable?: string;
+		/** Run the CLI against a private CodeBuddy config dir and disable its memory. */
+		isolatedEnv?: boolean;
+		/** Config dir used when `isolatedEnv` is on. Defaults to `~/.codebuddy-cli-isolated`. */
+		codebuddyConfigDir?: string;
 		/** Override the estimated context window (tokens) for ALL models. */
 		contextWindow?: number;
 		/** Override the estimated max output tokens for ALL models. */
 		maxTokens?: number;
 		/** Per-model overrides keyed by model id (or id substring). */
-		modelOverrides?: Record<string, {
-			contextWindow?: number;
-			maxTokens?: number;
-			reasoning?: boolean;
-			images?: boolean;
-		}>;
+		modelOverrides?: Record<string, ModelOverrides>;
+	};
+}
+
+export function resolveCodebuddyConfigDir(provider?: Config["provider"]): string | undefined {
+	if (provider?.isolatedEnv !== true) return undefined;
+	return provider.codebuddyConfigDir ?? join(homedir(), ".codebuddy-cli-isolated");
+}
+
+export function buildCodebuddyEnv(
+	provider?: Config["provider"],
+	base: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+	const env = { ...base, DISABLE_AUTO_COMPACT: "1" };
+	const dir = resolveCodebuddyConfigDir(provider);
+	if (!dir) return env;
+	return {
+		...env,
+		CODEBUDDY_CONFIG_DIR: dir,
+		CODEBUDDY_MEMORY_ENABLED: "0",
+		CODEBUDDY_DISABLE_AUTO_MEMORY: "1",
+		CODEBUDDY_TEAM_MEMORY_ENABLED: "0",
 	};
 }
 
