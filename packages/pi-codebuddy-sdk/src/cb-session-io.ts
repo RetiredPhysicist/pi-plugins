@@ -64,8 +64,8 @@ function piToCbMessages(messages: PiMessage[]): CbMessage[] {
 	return out;
 }
 
-function writeCbJsonl(sessionId: string, cwd: string, messages: CbMessage[]): string {
-	const jsonlPath = getSessionPath(sessionId, cwd);
+function writeCbJsonl(sessionId: string, cwd: string, messages: CbMessage[], codebuddyDir?: string): string {
+	const jsonlPath = getSessionPath(sessionId, cwd, codebuddyDir);
 	mkdirSync(join(jsonlPath, ".."), { recursive: true });
 	const lines: string[] = [];
 	let parentId: string | undefined;
@@ -112,7 +112,7 @@ export class Session {
 	}
 
 	save(): void {
-		writeCbJsonl(this.sessionId, this.projectPath, this.messages);
+		writeCbJsonl(this.sessionId, this.projectPath, this.messages, this.codebuddyDir);
 	}
 }
 
