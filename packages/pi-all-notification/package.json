@@ -1,6 +1,6 @@
 {
   "name": "pi-all-notification",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Multi-channel notification for pi: macOS desktop, Bark push, custom webhook",
   "keywords": [
     "pi-package",
@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "tsx": "^4.23.15",
+    "typebox": "1.4.3",
     "typescript": "^7.0.2"
   },
   "overrides": {
@@ -33,6 +34,7 @@
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "^1.3.0",
     "@earendil-works/pi-ai": "^1.3.0",
-    "@earendil-works/pi-tui": "^1.3.0"
+    "@earendil-works/pi-tui": "^1.3.0",
+    "typebox": "1.3.27"
   }
 }
