@@ -1,6 +1,6 @@
 {
   "name": "pi-shannon-statusline",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Cyberpunk terminal HUD for Pi — ported from shannon-statusline for Claude Code",
   "license": "MIT",
   "type": "module",
