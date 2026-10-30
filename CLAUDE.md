@@ -5,6 +5,12 @@ under `packages/`; each keeps its own npm name and version.
 
 ## Release a package
 
+Preferred: Changesets from the repo root (`npm ci --workspaces=false`, then
+`npx changeset`). Merging to `main` lets `.github/workflows/release.yml` open a
+Version Packages PR; merging that PR publishes via OIDC.
+
+Fallback (unchanged):
+
 ```bash
 cd packages/<pkg>
 # edit, then run the checks below

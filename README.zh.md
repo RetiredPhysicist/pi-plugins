@@ -65,24 +65,22 @@ CI（`.github/workflows/ci.yml`）在推到 `main`、pull request 和 `workflow_
 
 ## 发布
 
-名为 `<package>-v<version>` 的 tag 只发布该包。版本必须等于 `packages/<package>/package.json`。
+**推荐：** [Changesets](https://github.com/changesets/changesets)。在仓库根目录（先 `npm ci --workspaces=false`）：
 
-```text
-tag pi-atuin-v0.1.20
-        │
-        ▼
- .github/workflows/publish.yml
-        │
-        ▼
- npm ci → npm run build（如果有）→ npm publish --access public
+```bash
+npx changeset          # 选包与 bump 类型；把 .changeset/*.md 随 PR 提交
 ```
+
+合并进 `main` 后，`.github/workflows/release.yml` 会开 **Version Packages** PR。再合并该 PR，经 OIDC 执行 `changeset publish`。仓库不存 npm token。根目录 `package.json` 为 private，只为让 Changesets 发现 `packages/*`；日常仍是 `cd packages/<pkg> && npm ci`。
+
+**兼容（未改）：** 名为 `<package>-v<version>` 的 tag 仍只经 `.github/workflows/publish.yml` 发布该包。版本必须等于 `packages/<package>/package.json`。
 
 ```bash
 script/release-tag.sh pi-atuin
 git push origin pi-atuin-v0.1.20
 ```
 
-`script/release-tag.sh` 从该包读版本，在当前提交上打 tag。它不推送。发布走 npm OIDC（`id-token: write`）。本仓库不存 npm token。
+`script/release-tag.sh` 从该包读版本，在当前提交上打 tag，不推送。tag 发布同样走 npm OIDC（`id-token: write`）。
 
 ## 许可证
 
