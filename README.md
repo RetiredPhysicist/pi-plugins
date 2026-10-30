@@ -65,24 +65,22 @@ CI (`.github/workflows/ci.yml`) runs on push to `main`, on pull requests, and on
 
 ## Release
 
-A tag named `<package>-v<version>` publishes that package only. The version must equal `packages/<package>/package.json`.
+**Preferred:** [Changesets](https://github.com/changesets/changesets). From the repo root (after `npm ci --workspaces=false`):
 
-```text
-tag pi-atuin-v0.1.20
-        │
-        ▼
- .github/workflows/publish.yml
-        │
-        ▼
- npm ci → npm run build (if present) → npm publish --access public
+```bash
+npx changeset          # pick packages + bump type; commit .changeset/*.md in your PR
 ```
+
+On merge to `main`, `.github/workflows/release.yml` opens a **Version Packages** PR. Merge that PR to publish with OIDC (`changeset publish`). No npm token is stored in the repository. The root `package.json` is private and only exists so Changesets can discover `packages/*`; day-to-day work is still `cd packages/<pkg> && npm ci`.
+
+**Fallback (unchanged):** a tag named `<package>-v<version>` still publishes that package only via `.github/workflows/publish.yml`. The version must equal `packages/<package>/package.json`.
 
 ```bash
 script/release-tag.sh pi-atuin
 git push origin pi-atuin-v0.1.20
 ```
 
-`script/release-tag.sh` reads the version from that package and creates the tag on the current commit. It does not push. Publish uses npm OIDC (`id-token: write`). This repository does not store an npm token.
+`script/release-tag.sh` reads the version from that package and creates the tag on the current commit. It does not push. Tag publish also uses npm OIDC (`id-token: write`).
 
 ## License
 
