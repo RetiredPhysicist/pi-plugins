@@ -65,6 +65,15 @@ jobs:
         working-directory: ${{ steps.package.outputs.dir }}
         run: npm run build --if-present
 
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: ${{ steps.package.outputs.dir }}
+          format: spdx-json
+          artifact-name: ${{ steps.package.outputs.name }}-sbom
+          upload-artifact: true
+
       - name: Publish
         working-directory: ${{ steps.package.outputs.dir }}
         run: npx npm@12 publish --access public
