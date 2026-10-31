@@ -1,5 +1,6 @@
 # Dependabot: weekly grouped updates. Patch/minor/security auto-merged via workflow.
 version: 2
+# security-override-refresh: 2026-11-01 — force Dependabot recheck after npm overrides
 updates:
   - package-ecosystem: "npm"
     directories:
