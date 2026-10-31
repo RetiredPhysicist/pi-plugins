@@ -1,7 +1,7 @@
 {
   "name": "pi-shannon-statusline",
   "version": "1.2.2",
-  "description": "Cyberpunk terminal HUD for Pi — ported from shannon-statusline for Claude Code",
+  "description": "Cyberpunk terminal HUD for Pi \u2014 ported from shannon-statusline for Claude Code",
   "license": "MIT",
   "type": "module",
   "pi": {
@@ -38,6 +38,7 @@
     "typescript": "^7.0.2"
   },
   "overrides": {
-    "undici": "^8.12.3"
+    "undici": "^8.12.3",
+    "minimatch": "11.0.3"
   }
 }

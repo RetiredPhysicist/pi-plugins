@@ -2,7 +2,7 @@
   "name": "pi-atuin",
   "version": "0.1.23",
   "type": "module",
-  "description": "Atuin-style fuzzy history search for pi. Press ↑ for interactive history.",
+  "description": "Atuin-style fuzzy history search for pi. Press \u2191 for interactive history.",
   "license": "MIT",
   "author": "RealAlexandreAI",
   "repository": {
@@ -33,7 +33,8 @@
     "typescript": "^7.0.2"
   },
   "overrides": {
-    "undici": "^8.12.3"
+    "undici": "^8.12.3",
+    "minimatch": "11.0.3"
   },
   "scripts": {
     "test": "node --test test/*.test.ts",

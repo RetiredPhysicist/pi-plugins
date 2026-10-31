@@ -1,7 +1,7 @@
 {
   "name": "pi-all-search",
   "version": "1.1.20",
-  "description": "All-in-one web search extension for Pi — exa, tavily, anysearch, tinyfish, deepseek, firecrawl, context7",
+  "description": "All-in-one web search extension for Pi \u2014 exa, tavily, anysearch, tinyfish, deepseek, firecrawl, context7",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -32,7 +32,8 @@
     "typescript": "^7.0.2"
   },
   "overrides": {
-    "undici": "^8.12.3"
+    "undici": "^8.12.3",
+    "minimatch": "11.0.3"
   },
   "scripts": {
     "test": "node --import tsx --test tests/*.test.ts",
