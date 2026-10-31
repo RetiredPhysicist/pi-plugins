@@ -1,0 +1,33 @@
+# Dependabot: weekly grouped updates. Patch/minor/security auto-merged via workflow.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directories:
+      - "/"
+      - "/packages/pi-all-notification"
+      - "/packages/pi-all-search"
+      - "/packages/pi-all-tools"
+      - "/packages/pi-atuin"
+      - "/packages/pi-cloudflare-browser-run"
+      - "/packages/pi-codebuddy-sdk"
+      - "/packages/pi-dejavu-memory"
+      - "/packages/pi-gemini-multimodal"
+      - "/packages/pi-shannon-statusline"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns:
+          - "*"
