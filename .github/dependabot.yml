@@ -4,7 +4,6 @@ version: 2
 updates:
   - package-ecosystem: "npm"
     directories:
-      - "/"
       - "/packages/pi-all-notification"
       - "/packages/pi-all-search"
       - "/packages/pi-all-tools"
