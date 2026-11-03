@@ -65,15 +65,7 @@ CI（`.github/workflows/ci.yml`）在推到 `main`、pull request 和 `workflow_
 
 ## 发布
 
-**推荐：** [Changesets](https://github.com/changesets/changesets)。在仓库根目录（先 `npm ci --workspaces=false`）：
-
-```bash
-npx changeset          # 选包与 bump 类型；把 .changeset/*.md 随 PR 提交
-```
-
-合并进 `main` 后，`.github/workflows/release.yml` 会开 **Version Packages** PR。再合并该 PR，经 OIDC 执行 `changeset publish`。仓库不存 npm token。根目录 `package.json` 为 private，只为让 Changesets 发现 `packages/*`；日常仍是 `cd packages/<pkg> && npm ci`。
-
-**兼容（未改）：** 名为 `<package>-v<version>` 的 tag 仍只经 `.github/workflows/publish.yml` 发布该包。版本必须等于 `packages/<package>/package.json`。
+先改 `packages/<package>/package.json` 里的版本，提交后推 `<package>-v<version>` 标签。`.github/workflows/publish.yml` 只发布该包，走 npm OIDC；仓库不存 npm token。
 
 ```bash
 script/release-tag.sh pi-atuin

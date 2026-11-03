@@ -65,15 +65,7 @@ CI (`.github/workflows/ci.yml`) runs on push to `main`, on pull requests, and on
 
 ## Release
 
-**Preferred:** [Changesets](https://github.com/changesets/changesets). From the repo root (after `npm ci --workspaces=false`):
-
-```bash
-npx changeset          # pick packages + bump type; commit .changeset/*.md in your PR
-```
-
-On merge to `main`, `.github/workflows/release.yml` opens a **Version Packages** PR. Merge that PR to publish with OIDC (`changeset publish`). No npm token is stored in the repository. The root `package.json` is private and only exists so Changesets can discover `packages/*`; day-to-day work is still `cd packages/<pkg> && npm ci`.
-
-**Fallback (unchanged):** a tag named `<package>-v<version>` still publishes that package only via `.github/workflows/publish.yml`. The version must equal `packages/<package>/package.json`.
+Bump the version in `packages/<package>/package.json`, commit, and push a tag named `<package>-v<version>`. `.github/workflows/publish.yml` publishes only that package, through npm OIDC; no npm token is stored in the repository.
 
 ```bash
 script/release-tag.sh pi-atuin
