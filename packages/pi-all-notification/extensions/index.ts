@@ -281,7 +281,9 @@ export default function (pi: ExtensionAPI) {
     parameters: Type.Object({
       title: Type.String({ description: "Notification title (keep short, e.g. 'Build Complete')" }),
       message: Type.String({ description: "Notification body (task summary, error detail, etc.)" }),
-      priority: Type.Optional(StringEnum(["normal", "high", "critical"] as const)),
+      priority: Type.Optional(
+        Type.Unsafe<"normal" | "high" | "critical">(StringEnum(["normal", "high", "critical"] as const)),
+      ),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
       const cfg = loadConfig();

@@ -8,6 +8,17 @@ import type { SearchProvider, SearchResult } from "./providers/types.js";
 import { classifyIntent, routeIntent, type SearchIntent } from "./router.js";
 import { deduplicateResults, SafeMemoryCache } from "./utils.js";
 
+type ProviderChoice =
+  | "auto"
+  | "exa"
+  | "tavily"
+  | "anysearch"
+  | "tinyfish"
+  | "deepseek"
+  | "firecrawl"
+  | "firecrawl-dev"
+  | "context7";
+
 export const searchCache = new SafeMemoryCache<any>(300000, 100);
 
 const MIN_RESULTS = 1;
@@ -157,11 +168,13 @@ export function registerWebSearchTool(pi: ExtensionAPI): void {
         }),
       ),
       provider: Type.Optional(
-        StringEnum(["auto", "exa", "tavily", "anysearch", "tinyfish", "deepseek", "firecrawl", "firecrawl-dev", "context7"], {
-          description:
-            "Directly override the search provider. 'auto' uses local intent routing (default).",
-          default: "auto",
-        }),
+        Type.Unsafe<ProviderChoice>(
+          StringEnum(["auto", "exa", "tavily", "anysearch", "tinyfish", "deepseek", "firecrawl", "firecrawl-dev", "context7"], {
+            description:
+              "Directly override the search provider. 'auto' uses local intent routing (default).",
+            default: "auto",
+          }),
+        ),
       ),
       max_results: Type.Optional(
         Type.Number({

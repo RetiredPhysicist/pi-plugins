@@ -1922,11 +1922,17 @@ export default async function (pi: ExtensionAPI) {
 	if (allowFull) modeDesc += ` "full": allows writing and bash execution (careful: runs without feedback to pi).`;
 
 	if (askConf?.enabled !== false) {
+		type AskCodebuddyMode = (typeof modeValues)[number];
+		type AskCodebuddyThinking = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 		const askCodebuddyParams = Type.Object({
 			prompt: Type.String({ description: "The question or task for CodeBuddy. By default CodeBuddy sees the full conversation history. Don't research up front, let CodeBuddy explore." }),
-			mode: Type.Optional(StringEnum(modeValues, { description: modeDesc })),
+			mode: Type.Optional(Type.Unsafe<AskCodebuddyMode>(StringEnum(modeValues, { description: modeDesc }))),
 			model: Type.Optional(Type.String({ description: "CodeBuddy model ID supported by your account. Omit to use the CLI's account default." })),
-			thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const, { description: "Thinking effort level. Omit to use CodeBuddy's default." })),
+			thinking: Type.Optional(
+				Type.Unsafe<AskCodebuddyThinking>(
+					StringEnum(["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const, { description: "Thinking effort level. Omit to use CodeBuddy's default." }),
+				),
+			),
 			isolated: Type.Optional(Type.Boolean({ description: "When true, CodeBuddy sees only this prompt (clean session). When false (default), CodeBuddy sees the full conversation history." })),
 		});
 		pi.registerTool<typeof askCodebuddyParams>({
