@@ -15,7 +15,7 @@ Memory is never pushed into context. Only the boot layer is always present; ever
 
 ### Reading
 - IF user mentions a topic you should have memory about → `dejavu_read` first
-- IF unsure about a memory URI → use `dejavu_search`; **describe what you need in natural language (concept/意图), not just the exact words** — semantic recall finds memories with no shared keywords (e.g. "部署失败" finds a note about a broken release pipeline); keywords still work, but don't limit yourself to them
+- IF unsure about a memory URI → use `dejavu_search`; **describe what you need in natural language (concept/意图), not just the exact words**. The server answers from keywords when they fill the request and only then adds semantic hits, so a plain-language query still finds a note with no shared tokens (e.g. "部署失败" finds a note about a broken release pipeline)
 - IF conversation exceeds 15 turns or the task topic changes materially → `dejavu_search` to recalibrate
 - IF a disclosure condition in view is triggered → must read immediately
 
@@ -28,7 +28,7 @@ Judge: **does this change your future behavior?** If no, don't write it.
 - Successful judgments → `dejavu_create` with [Baseline], [Deviation], [Result], [Reusable judgment] format
 - **Prefer `dejavu_update` over `dejavu_create`**: identity is the URI, not the Memory ID — if the topic already has a node, update it.
 
-Choose `parent_uri` by where you would naturally look for this memory when you need it. A child's disclosure only shows when its parent is read — wrong parent = never recalled. Add extra entry points with `add_alias`.
+Choose `parent_uri` by where you would naturally look for this memory when you need it. A child's disclosure only shows when its parent is read — wrong parent = never recalled. Add extra entry points with `create_memory(alias_of=<target_uri>, parent_uri=<where the alias belongs>, title=<alias>)`.
 
 `priority`: non-negative integer, lower = more important. Boot-layer/red-line facts get small numbers; corner knowledge gets larger ones.
 
@@ -71,7 +71,9 @@ Run when: after ~30-50 new memories, when you keep repeating the same mistake, o
 
 ## Tool set awareness
 Your daily loop is 5 tools: `dejavu_read` / `dejavu_search` / `dejavu_create` / `dejavu_update` / `dejavu_delete`.
-- `list_memories`, `add_alias`, `manage_triggers`, `rename_memory`: occasional housekeeping.
-- `rollback_memory` + `list_audit`: recovery after a bad edit — not for routine use.
+- `list_memories`, `manage_triggers`: occasional housekeeping.
+- `create_memory(alias_of=…)`: a second entry point to an existing memory.
+- `update_memory(new_name=…)`: rename a path (use it alone, no content fields).
+- `audit`: the change log, and `action=rollback` for recovery after a bad edit — not for routine use.
 - `reindex_vectors`: **operator maintenance, never call it** — it backfills semantic vectors after server upgrades; you have nothing to reindex.
 - The session hook only emits `DEJAVU_BOOT_REQUIRED`; the agent still calls `dejavu_boot` when it sees that marker. Call it manually only when the hook did not run.

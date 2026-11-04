@@ -354,13 +354,19 @@ export default function (pi: ExtensionAPI): void {
     parameters: Type.Object({
       query: Type.String({ description: "Concept or keywords to search for" }),
       limit: Type.Optional(Type.Number({ description: "Max results (1-50, default 20)" })),
-      domain: Type.Optional(Type.String({ description: "Domain filter (e.g., dejavu); ignored by the current DejaVu server" })),
+      mode: Type.Optional(Type.Union([Type.Literal("auto"), Type.Literal("fts"), Type.Literal("hybrid")], {
+        description: "Default auto: answers from keywords when they fill the request, then adds semantic hits. hybrid always fuses both; fts is keyword-only and makes no embedding call.",
+      })),
+      prefix: Type.Optional(Type.String({
+        description: "Project scope: only paths at or below this prefix, e.g. agent/work. One personal tree, no tenants.",
+      })),
     }),
 
     async execute(_toolCallId, params) {
       const args: Record<string, unknown> = { query: params.query };
       if (params.limit !== undefined) args.limit = params.limit;
-      if (params.domain) args.domain = params.domain;
+      if (params.mode) args.mode = params.mode;
+      if (params.prefix) args.prefix = params.prefix;
       const data = await callMCP("tools/call", { name: MCP_TOOLS.search, arguments: args });
       return { content: [{ type: "text", text: toolResultText(data, "No results") }], details: {} };
     },
