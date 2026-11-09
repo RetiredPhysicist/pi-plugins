@@ -1741,7 +1741,15 @@ let modelsDiscovered = false;
 
 let discoverInFlight: Promise<void> | null = null;
 
+/** Discovery deadline: tighter than the provider path so a hung CLI cannot
+ *  stall pi startup; on expiry the caller falls back to the cached model list. */
+const DISCOVERY_TIMEOUT_MS = 30_000;
+
 async function discoverModels(pi: ExtensionAPI): Promise<void> {
+	// pi awaits this factory before the session becomes usable, and the SDK
+	// gate serializes every later query behind it: a discovery whose CLI
+	// subprocess never answers would block startup AND all subsequent turns
+	// forever. Hence the tighter deadline below.
 	await withSdkGate(async () => {
 		let q: ReturnType<typeof startQuery> | undefined;
 		try {
@@ -1801,7 +1809,7 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 			// lifetime. Idempotent, so a completed iterator is a harmless no-op.
 			if (q) closeQueryTransport(q, "discoverModels", { log: debug });
 		}
-	});
+	}, { timeoutMs: DISCOVERY_TIMEOUT_MS });
 }
 
 async function ensureModelsDiscovered(): Promise<void> {
