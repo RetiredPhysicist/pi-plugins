@@ -4,9 +4,9 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createSession, getProjectDir, readSession } from "../src/cb-session-io.js";
 
 describe("Session.save", () => {
@@ -36,6 +36,31 @@ describe("Session.save", () => {
 			else process.env.HOME = previousHome;
 			if (previousConfigDir === undefined) delete process.env.CODEBUDDY_CONFIG_DIR;
 			else process.env.CODEBUDDY_CONFIG_DIR = previousConfigDir;
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	it("replaces the session file atomically: no temp files left behind", () => {
+		const root = mkdtempSync(join(tmpdir(), "cb-session-atomic-"));
+		try {
+			const session = createSession({ projectPath: root });
+			session.importPiMessages([{ role: "user", content: "turn one" }]);
+			session.save();
+			session.importPiMessages([
+				{ role: "user", content: "turn one" },
+				{ role: "assistant", content: [{ type: "text", text: "ok" }] },
+				{ role: "user", content: "turn two" },
+			]);
+			session.save();
+
+			const dir = dirname(session.jsonlPath);
+			const leftovers = readdirSync(dir).filter((f) => f.endsWith(".tmp"));
+			assert.deepEqual(leftovers, [], "atomic write must not leave temp files");
+
+			const restored = readSession(session.sessionId, root);
+			assert.ok(restored, "session readable after atomic replace");
+			assert.equal(restored.messages.length, 3);
+		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
 	});
