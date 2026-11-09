@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "tsx": "^4.23.15",
-    "typebox": "1.4.4",
+    "typebox": "1.4.6",
     "typescript": "^7.0.2"
   },
   "overrides": {
