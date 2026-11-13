@@ -2,7 +2,7 @@
 // CodeBuddy stores sessions at ~/.codebuddy/projects/<sanitized-path>/<sessionId>.jsonl
 
 import { randomUUID } from "crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import type { Message as PiMessage } from "@earendil-works/pi-ai";
@@ -89,7 +89,19 @@ function writeCbJsonl(sessionId: string, cwd: string, messages: CbMessage[], cod
 			parentId = id;
 		}
 	}
-	writeFileSync(jsonlPath, lines.join("\n") + (lines.length ? "\n" : ""));
+	// Atomic replace: a crash mid-write would otherwise leave a truncated
+	// JSONL that CodeBuddy --resume silently treats as a fresh session (the
+	// user loses the whole prior context with no error). Write a sibling
+	// temp file, then rename over the target — same-directory rename is
+	// atomic on POSIX and Windows.
+	const tmpPath = `${jsonlPath}.${randomUUID()}.tmp`;
+	writeFileSync(tmpPath, lines.join("\n") + (lines.length ? "\n" : ""));
+	try {
+		renameSync(tmpPath, jsonlPath);
+	} catch (err) {
+		try { rmSync(tmpPath, { force: true }); } catch { /* ignore */ }
+		throw err;
+	}
 	return jsonlPath;
 }
 
