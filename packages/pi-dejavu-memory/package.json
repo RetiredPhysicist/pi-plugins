@@ -1,6 +1,6 @@
 {
   "name": "pi-dejavu-memory",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "DejaVu memory extension for Pi — automated memory management with SessionStart boot protocol",
   "license": "MIT",
   "type": "module",
@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "tsx": "^4.23.15",
-    "typebox": "1.4.6",
+    "typebox": "1.4.7",
     "typescript": "^7.0.2"
   },
   "overrides": {
