@@ -1750,8 +1750,35 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 	// gate serializes every later query behind it: a discovery whose CLI
 	// subprocess never answers would block startup AND all subsequent turns
 	// forever. Hence the tighter deadline below.
-	await withSdkGate(async () => {
+	//
+	// The gate's timeout rejects the OUTER promise while the callback below
+	// keeps awaiting supportedModels(), so its own catch never runs. Route
+	// that rejection through the same cached-or-fallback recovery so pi
+	// startup proceeds and discoverInFlight does not stay rejected (every
+	// later ensureModelsDiscovered() would rethrow it).
+	const recoverFromCache = (err: unknown) => {
+		// The aborted callback may still settle later and recover on its own;
+		// its catch lands here after the gate path already did the work.
+		if (modelsDiscovered) return;
+		const cached = readModelsCache();
+		if (cached && cached.length) {
+			MODELS = cached;
+			debug(`discoverModels: failed, recovered ${MODELS.length} cached models`, err);
+			registerCodebuddyProvider(pi);
+			modelsDiscovered = true;
+		} else {
+			debug("discoverModels: failed, using fallback models", err);
+		}
+	};
+	await withSdkGate(async (signal) => {
 		let q: ReturnType<typeof startQuery> | undefined;
+		// On gate timeout the signal aborts: supportedModels() never settles,
+		// so the finally below would never run — close the transport here or
+		// the codebuddy-headless child outlives the gate and leaks.
+		const abortTeardown = () => {
+			if (q) closeQueryTransport(q, "discoverModels:aborted", { log: debug });
+		};
+		signal.addEventListener("abort", abortTeardown, { once: true });
 		try {
 			q = startQuery({
 				prompt: " ",
@@ -1793,23 +1820,16 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 			// model list instead of collapsing to the single fallback model —
 			// otherwise the previously selected codebuddy model disappears
 			// from /model after `pi -r` and the user must re-pick it.
-			const cached = readModelsCache();
-			if (cached && cached.length) {
-				MODELS = cached;
-				debug(`discoverModels: failed, recovered ${MODELS.length} cached models`, err);
-				registerCodebuddyProvider(pi);
-				modelsDiscovered = true;
-			} else {
-				debug("discoverModels: failed, using fallback models", err);
-			}
+			recoverFromCache(err);
 		} finally {
 			// supportedModels() never iterates the query, so the SDK's cleanup()
 			// (the only place the transport is closed) never runs here — close it
 			// explicitly or the codebuddy-headless child leaks for the host's
 			// lifetime. Idempotent, so a completed iterator is a harmless no-op.
+			signal.removeEventListener("abort", abortTeardown);
 			if (q) closeQueryTransport(q, "discoverModels", { log: debug });
 		}
-	}, { timeoutMs: DISCOVERY_TIMEOUT_MS });
+	}, { timeoutMs: DISCOVERY_TIMEOUT_MS }).catch(recoverFromCache);
 }
 
 async function ensureModelsDiscovered(): Promise<void> {

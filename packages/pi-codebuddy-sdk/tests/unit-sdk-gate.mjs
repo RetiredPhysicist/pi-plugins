@@ -19,6 +19,32 @@ describe("withSdkGate timeout", () => {
 		assert.ok(Date.now() - start < 5_000, "gate stayed blocked after timeout");
 	});
 
+	it("aborts the timed-out task's signal so it can tear down its subprocess", async () => {
+		let aborted = false;
+		await assert.rejects(
+			withSdkGate((signal) => new Promise((_, reject) => {
+				signal.addEventListener("abort", () => {
+					aborted = true;
+					reject(new Error("torn down"));
+				});
+			}), { timeoutMs: 50 }),
+			/SDK gate task timed out after 50ms/,
+		);
+		assert.equal(aborted, true, "gate timeout must abort the task's signal");
+		// The late rejection of the aborted task must not become unhandled.
+		await new Promise((r) => setTimeout(r, 10));
+	});
+
+	it("does not abort the signal of a task that completes", async () => {
+		let sawAborted = false;
+		const value = await withSdkGate(async (signal) => {
+			signal.addEventListener("abort", () => { sawAborted = true; });
+			return "done";
+		}, { timeoutMs: 5_000 });
+		assert.equal(value, "done");
+		assert.equal(sawAborted, false);
+	});
+
 	it("still serializes tasks and preserves order", async () => {
 		const order = [];
 		const a = withSdkGate(async () => {
