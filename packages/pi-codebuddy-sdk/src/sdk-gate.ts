@@ -1,12 +1,41 @@
 // Serialize CodeBuddy SDK query() subprocesses — only one CLI at a time.
+// Every gated task also carries a timeout: a task that hangs (CLI never
+// answering its control request) must not hold the gate — and with it every
+// later query — forever. On timeout the task's promise rejects and its
+// AbortSignal fires, so the task can kill its subprocess instead of leaving
+// it running beside the next queued task; callers fall back to their
+// cached/error paths.
 
 let chain: Promise<void> = Promise.resolve();
 
-export function withSdkGate<T>(fn: () => Promise<T>): Promise<T> {
-	const run = chain.then(fn);
+export const DEFAULT_GATE_TIMEOUT_MS = 120_000;
+
+export function withSdkGate<T>(
+	fn: (signal: AbortSignal) => Promise<T>,
+	options?: { timeoutMs?: number },
+): Promise<T> {
+	const timeoutMs = options?.timeoutMs ?? DEFAULT_GATE_TIMEOUT_MS;
+	const run = chain.then(() =>
+		new Promise<T>((resolve, reject) => {
+			const controller = new AbortController();
+			const timer = setTimeout(() => {
+				// Abort first so the task can tear down its subprocess; a
+				// bare reject would leave that child running after the gate
+				// moves on, breaking the serialization the gate exists for.
+				controller.abort();
+				reject(new Error(`SDK gate task timed out after ${timeoutMs}ms`));
+			}, timeoutMs);
+			timer.unref?.();
+			Promise.resolve(fn(controller.signal)).then(
+				(value) => { clearTimeout(timer); resolve(value); },
+				(err) => { clearTimeout(timer); reject(err); },
+			);
+		}),
+	);
 	chain = run.then(() => undefined, () => undefined);
 	return run;
 }
+
 
 export async function drainQuery(q: AsyncIterable<unknown>): Promise<void> {
 	const timer = new Promise<void>((r) => setTimeout(r, 5000));
