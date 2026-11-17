@@ -2,7 +2,7 @@
 // CodeBuddy stores sessions at ~/.codebuddy/projects/<sanitized-path>/<sessionId>.jsonl
 
 import { randomUUID } from "crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import type { Message as PiMessage } from "@earendil-works/pi-ai";
@@ -89,7 +89,30 @@ function writeCbJsonl(sessionId: string, cwd: string, messages: CbMessage[], cod
 			parentId = id;
 		}
 	}
-	writeFileSync(jsonlPath, lines.join("\n") + (lines.length ? "\n" : ""));
+	// Atomic replace: a crash mid-write would otherwise leave a truncated
+	// JSONL that CodeBuddy --resume silently treats as a fresh session (the
+	// user loses the whole prior context with no error). Write a sibling
+	// temp file, then rename over the target — same-directory rename is
+	// atomic on POSIX and Windows.
+	const tmpPath = `${jsonlPath}.${randomUUID()}.tmp`;
+	// The temp file holds the full conversation history, and the rename would
+	// otherwise leave the session file at the umask default (often 0644,
+	// readable by every local identity). Create it owner-only and keep the
+	// mode the previous session file had.
+	let mode = 0o600;
+	try {
+		mode = statSync(jsonlPath).mode & 0o777;
+	} catch {
+		// First save of this session: keep the owner-only default.
+	}
+	try {
+		writeFileSync(tmpPath, lines.join("\n") + (lines.length ? "\n" : ""), { mode });
+		chmodSync(tmpPath, mode);
+		renameSync(tmpPath, jsonlPath);
+	} catch (err) {
+		try { rmSync(tmpPath, { force: true }); } catch { /* ignore */ }
+		throw err;
+	}
 	return jsonlPath;
 }
 
