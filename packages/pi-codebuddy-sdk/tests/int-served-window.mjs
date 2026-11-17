@@ -52,10 +52,13 @@ try {
 	// The bridge's invariant: pi's registered window must equal the window CC
 	// actually serves, or pi's status bar and auto-compaction threshold drift
 	// from reality (issue #24/#17). Account-agnostic — holds on any plan.
+	// Discovery now seeds the registered window from the CLI catalog, so an
+	// already-equal value needs no sync line.
 	const served = Number(line.match(/served contextWindow=(\d+)/)[1]);
 	const registeredBefore = Number(line.match(/registered=(\d+)/)[1]);
 	const servedModelId = BRIDGE_MODEL.split("/")[1];
-	const synced = lines.find((l) => new RegExp(`result: ${servedModelId} contextWindow ${registeredBefore} -> ${served}`).test(l));
+	const synced = served === registeredBefore
+		|| lines.some((l) => new RegExp(`result: ${servedModelId} contextWindow ${registeredBefore} -> ${served}`).test(l));
 	if (served > 0 && !synced) {
 		throw new Error(`served contextWindow (${served}) was not synced from registered (${registeredBefore}).\n  ${line.trim()}`);
 	}

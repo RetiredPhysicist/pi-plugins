@@ -6,7 +6,7 @@
 //
 // Extracted from index.ts so tests can import without activating the extension.
 
-import type { AssistantMessage, AssistantMessageEventStream, Model } from "@earendil-works/pi-ai";
+import type { AssistantMessage, AssistantMessageEventStream, Context, Model } from "@earendil-works/pi-ai";
 import type { McpResult } from "./extract-tool-results.js";
 
 export interface PendingToolCall {
@@ -19,6 +19,11 @@ export class QueryContext {
 	activeQuery: unknown | null = null;
 	currentPiStream: AssistantMessageEventStream | null = null;
 	latestCursor = 0;
+	// Newest pi history this query has seen. A tool-using turn calls the provider
+	// again with a longer context after each result, so the snapshot taken when
+	// the query started is stale by the time the turn ends; the session
+	// fingerprint must describe the history pi actually holds.
+	latestMessages: Context["messages"] | null = null;
 	pendingToolCalls = new Map<string, PendingToolCall>();
 	pendingResults = new Map<string, McpResult>();
 	turnToolCallIds: string[] = [];

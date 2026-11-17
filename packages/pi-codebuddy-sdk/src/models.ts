@@ -11,6 +11,10 @@ export type PiModel = {
 	maxTokens: number;
 	thinkingLevelMap?: Record<string, string>;
 	cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
+	/** Credits the CLI charges per turn (`credits` in the CLI catalog, e.g. "x0.79"). */
+	credits?: number;
+	/** Free-form catalog description, shown under the model name in /model. */
+	description?: string;
 };
 
 const DEFAULT_CONTEXT = 131_072;
@@ -22,12 +26,20 @@ type SdkModelMeta = {
 	maxInputTokens?: number;
 	maxOutputTokens?: number;
 	contextWindow?: { supportedLengths?: ReadonlyArray<number>; defaultLength?: number };
+	supportsImages?: boolean;
+	supportsReasoning?: boolean;
+	credits?: string;
+	description?: string;
+	descriptionEn?: string;
+	descriptionZh?: string;
+	reasoning?: { supportedEfforts?: ReadonlyArray<string>; defaultEffort?: string };
 };
 
-// Capabilities are inferred from the model id: this backend returns `{id, name}`
-// only, so there is no metadata to read (unlike the window, capabilities cannot
-// be learned from `modelUsage` either). `modelOverrides.reasoning` / `.images`
-// still win over every hint below.
+// The CLI's full catalog (`get_available_models`) carries capabilities, limits,
+// credits and effort levels, so those win whenever present. The id hints below
+// stay as the fallback for the simplified `supportedModels()` payload, which
+// carries nothing but `{id, name}`. `modelOverrides.reasoning` / `.images`
+// still win over both.
 //
 // The families cover the CodeBuddy catalog, whose entries are reasoning-only and
 // image-capable apart from the two text-only models called out in
@@ -40,12 +52,39 @@ const IMAGE_HINTS = /claude|gemini|gpt|glm-5[.v]|hy[34]|deepseek-v4|kimi-k[23]|m
 // reading" from each.
 const TEXT_ONLY_MODELS = new Set(["glm-5.1", "glm-5.2"]);
 
-function detectThinking(id: string): boolean {
+function detectThinking(id: string, meta?: SdkModelMeta): boolean {
+	if (meta?.supportsReasoning !== undefined) return meta.supportsReasoning;
 	return REASONING_HINTS.test(id);
 }
 
-function detectImages(id: string): boolean {
+function detectImages(id: string, meta?: SdkModelMeta): boolean {
+	if (meta?.supportsImages !== undefined) return meta.supportsImages;
 	return !TEXT_ONLY_MODELS.has(id.toLowerCase()) && IMAGE_HINTS.test(id);
+}
+
+/** "x0.79" / "x0.79 credits" → 0.79. Catalog-only suffix and missing data → undefined. */
+export function parseCredits(credits: string | undefined): number | undefined {
+	if (typeof credits !== "string") return undefined;
+	const m = /^x?(\d+(?:\.\d+)?|\.\d+)/i.exec(credits.trim());
+	if (!m) return undefined;
+	const n = Number(m[1]);
+	return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+/** Levels the CLI advertises, mapped onto pi's level names. */
+function thinkingLevelMap(meta: SdkModelMeta | undefined): Record<string, string> | undefined {
+	const efforts = meta?.reasoning?.supportedEfforts;
+	if (!efforts?.length) return undefined;
+	const out: Record<string, string> = {};
+	for (const level of ["low", "medium", "high", "xhigh", "max"]) {
+		if (efforts.includes(level)) out[level] = level;
+	}
+	return Object.keys(out).length ? out : undefined;
+}
+
+function catalogDescription(meta: SdkModelMeta | undefined): string | undefined {
+	const text = meta?.description ?? meta?.descriptionEn;
+	return typeof text === "string" && text.trim() ? text.trim() : undefined;
 }
 
 function estimateContext(id: string): number {
@@ -78,10 +117,13 @@ export function rawModelsFromSdk(supported: Array<ModelInfo & SdkModelMeta>): Pi
 		.map((m) => ({
 		id: m.id!,
 		name: m.name || m.id!,
-		reasoning: detectThinking(m.id!),
-		input: detectImages(m.id!) ? ["text", "image"] as const : ["text"] as const,
+		reasoning: detectThinking(m.id!, m),
+		input: detectImages(m.id!, m) ? ["text", "image"] as const : ["text"] as const,
 		contextWindow: contextFromMetadata(m) ?? estimateContext(m.id!),
 		maxTokens: positive(m.maxOutputTokens) ?? estimateMaxTokens(m.id!),
+		...(thinkingLevelMap(m) ? { thinkingLevelMap: thinkingLevelMap(m) } : {}),
+		...(parseCredits(m.credits) !== undefined ? { credits: parseCredits(m.credits) } : {}),
+		...(catalogDescription(m) ? { description: catalogDescription(m) } : {}),
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 	}));
 }

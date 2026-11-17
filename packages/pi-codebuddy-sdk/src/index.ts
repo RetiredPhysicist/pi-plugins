@@ -1,7 +1,7 @@
 import { calculateCost, StringEnum, type AssistantMessage, type AssistantMessageEventStream, type Context, type Model, type SimpleStreamOptions, type Tool } from "@earendil-works/pi-ai";
 import * as piAi from "@earendil-works/pi-ai";
 import { buildSessionContext, compact, keyHint, type CompactionEntry, type ExtensionAPI, type ExtensionUIContext } from "@earendil-works/pi-coding-agent";
-import { createSdkMcpServer, query, type Effort, type Message as CbMessage, type UserMessage as CbUserMessage } from "@tencent-ai/agent-sdk";
+import { createSdkMcpServer, query, unstable_v2_createSession, type Effort, type Message as CbMessage, type RawLanguageModel, type UserMessage as CbUserMessage } from "@tencent-ai/agent-sdk";
 import { Type } from "typebox";
 import { Text } from "@earendil-works/pi-tui";
 import { createSession, deleteSession } from "./cb-session-io.js";
@@ -18,6 +18,9 @@ import { withCliRuntime } from "./cli-runtime.js";
 import { readTranscript } from "./transcript-compat.js";
 import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, buildCodebuddySystemPrompt } from "./skills.js";
 import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
+import { historyKey, replyKey } from "./history-key.js";
+import { routeSystemPrompt } from "./system-prompt-file.js";
+import { renderModelCatalog, renderModelDetail } from "./model-catalog-view.js";
 import { extractAllToolResults as _extractAllToolResults, type McpResult } from "./extract-tool-results.js";
 import { QueryContext, ctx } from "./query-state.js";
 import { buildCodebuddyEnv, loadConfig, resolveCodebuddyConfigDir, type Config } from "./config.js";
@@ -176,6 +179,51 @@ function startQuery(args: Parameters<typeof query>[0]): ReturnType<typeof query>
 	return q;
 }
 
+/**
+ * Read the CLI's full model catalog.
+ *
+ * `supportedModels()` returns only `{id, name}`; the v2 session API exposes
+ * `get_available_models`, which carries limits, capabilities, effort levels and
+ * per-turn credits. Discovery uses it so /model shows the real metadata, and
+ * falls back to the simplified list when the CLI does not implement it.
+ */
+async function readModelCatalog(signal?: AbortSignal): Promise<{
+	models: RawLanguageModel[];
+	simplified: Awaited<ReturnType<ReturnType<typeof query>["supportedModels"]>>;
+}> {
+	const session = unstable_v2_createSession({
+		cwd: process.cwd(),
+		tools: [],
+		permissionMode: "bypassPermissions",
+		env: buildCodebuddyEnv(providerSettings),
+		...(providerSettings.pathToCodebuddyCode ? { pathToCodebuddyCode: providerSettings.pathToCodebuddyCode } : {}),
+		...(providerSettings.executable ? { executable: providerSettings.executable as any } : {}),
+	});
+	const simplified: Awaited<ReturnType<ReturnType<typeof query>["supportedModels"]>> = [];
+	const onAbort = () => session.close();
+	signal?.addEventListener("abort", onAbort, { once: true });
+	try {
+		const raw = await session.getAvailableModelsRaw();
+		if (raw.length) return { models: raw, simplified };
+	} catch (err) {
+		debug("readModelCatalog: get_available_models unavailable, falling back", err);
+	} finally {
+		signal?.removeEventListener("abort", onAbort);
+		session.close();
+	}
+	const q = startQuery({ prompt: " ", options: { maxTurns: 0, permissionMode: "bypassPermissions", tools: [], env: buildCodebuddyEnv(providerSettings) } });
+	const onAbortQuery = () => closeQueryTransport(q, "readModelCatalog:aborted", { log: debug });
+	signal?.addEventListener("abort", onAbortQuery, { once: true });
+	try {
+		simplified.push(...await q.supportedModels());
+		await q.return().catch(() => {});
+	} finally {
+		signal?.removeEventListener("abort", onAbortQuery);
+		closeQueryTransport(q, "readModelCatalog", { log: debug });
+	}
+	return { models: [], simplified };
+}
+
 // --- Constants ---
 
 // Global key for the first streamSimple that owns the shared ModelRegistry.
@@ -268,6 +316,17 @@ interface SessionState {
 	sessionId: string;
 	cursor: number;
 	cwd: string;
+	// Fingerprint of the history the session was built from (everything before
+	// `cursor`). REUSE requires the incoming prefix to hash to this value, so a
+	// /compact or session-tree move that happens to keep the message count can
+	// no longer resume a session that describes other content. Absent on state
+	// written by an older version — then the prior count-only guard applies.
+	historyKey?: string;
+	// Fingerprint of the assistant reply this provider last streamed. When pi
+	// appends a *different* trailing assistant (edited reply, fork, another
+	// provider's turn), the fingerprint no longer matches and the session is
+	// rebuilt from the edited history instead of resuming the stale transcript.
+	pendingReplyKey?: string;
 	// Force the next syncSharedSession call down the REBUILD path. Set when
 	// pi has mutated its messages array out from under us (compact, tree
 	// navigation) or after an abort left the JSONL in an indeterminate state.
@@ -285,6 +344,24 @@ interface SessionState {
 }
 
 let sharedSession: SessionState | null = null;
+
+/** Record that `messages` (a prefix of pi's history) is now what the CodeBuddy
+ *  session contains. `pendingReply` is the assistant reply this provider just
+ *  streamed when it is not part of that prefix. */
+function commitSessionState(
+	sessionId: string,
+	messages: readonly Context["messages"][number][],
+	cwd: string,
+	pendingReply?: Context["messages"][number],
+): SessionState {
+	return {
+		sessionId,
+		cursor: messages.length,
+		cwd,
+		historyKey: historyKey(messages),
+		pendingReplyKey: replyKey(pendingReply),
+	};
+}
 
 // Convert pi messages to Anthropic API format for session import.
 // Lossy: non-Anthropic thinking blocks are dropped (no valid signature), and only
@@ -438,6 +515,7 @@ async function runIsolatedSummary(
 		const codebuddyExecutable = loadConfig(cwd).provider?.pathToCodebuddyCode;
 		const cliModel = codebuddyModelId(model);
 		debug(`compact summary: spawn model=${cliModel} registeredModel=${model.id} promptLen=${promptText.length}`);
+		const promptRouting = routeSystemPrompt(view.systemPrompt);
 
 		sdkQuery = startQuery({
 			prompt: promptText,
@@ -448,7 +526,8 @@ async function runIsolatedSummary(
 				strictMcpConfig: true,
 				settingSources: [] as SettingSource[],
 				persistSession: false,
-				systemPrompt: view.systemPrompt,
+				...(promptRouting.systemPrompt ? { systemPrompt: promptRouting.systemPrompt } : {}),
+				...(promptRouting.extraArgs ? { extraArgs: promptRouting.extraArgs } : {}),
 				model: cliModel,
 				maxTurns: 1,
 				...(codebuddyExecutable ? { pathToCodebuddyCode: codebuddyExecutable } : {}),
@@ -625,18 +704,38 @@ function syncSharedSession(
 	// pi-side history rewrites such as /compact and session_tree: without it,
 	// missed = [].slice(cursor) can falsely hit REUSE and resume an unrelated
 	// longer CC session. See issue #25.
+	//
+	// Length alone is not identity (issue #33): /compact or a session-tree move
+	// can produce a different conversation with the same count. The stored
+	// historyKey must still match the incoming prefix, and a trailing assistant
+	// the provider already streamed must still hash to pendingReplyKey — an
+	// edited reply or a fork then falls through to REBUILD.
 	if (sharedSession && !sharedSession.needsRebuild && priorMessages.length >= sharedSession.cursor) {
+		const prefixMatches = sharedSession.historyKey === undefined
+			|| sharedSession.historyKey === historyKey(priorMessages.slice(0, sharedSession.cursor));
 		const missed = priorMessages.slice(sharedSession.cursor);
 		const trailingAssistantOnly =
 			missed.length === 1 && (missed[0] as { role?: string }).role === "assistant";
-		if (missed.length === 0 || trailingAssistantOnly) {
+		const replyMatches = !trailingAssistantOnly
+			|| sharedSession.pendingReplyKey === undefined
+			|| sharedSession.pendingReplyKey === replyKey(missed[0]);
+		if (prefixMatches && replyMatches && (missed.length === 0 || trailingAssistantOnly)) {
 			if (trailingAssistantOnly) {
-				sharedSession = { ...sharedSession, cursor: priorMessages.length, cwd };
+				sharedSession = {
+					...sharedSession,
+					cursor: priorMessages.length,
+					// Trailing assistant is committed history now; hash it in place
+					// of the streamed-reply fingerprint.
+					historyKey: historyKey(priorMessages),
+					pendingReplyKey: undefined,
+					cwd,
+				};
 			}
 			debug(`Case 3: ${trailingAssistantOnly ? "advanced cursor past trailing assistant, " : ""}resuming session ${sharedSession.sessionId.slice(0, 8)}, cursor=${sharedSession.cursor}`);
 			debug(`syncResult: path=reuse sessionId=${sharedSession.sessionId} cursor=${sharedSession.cursor}`);
 			return { sessionId: sharedSession.sessionId };
 		}
+		debug(`sync: session ${sharedSession.sessionId.slice(0, 8)} diverged (prefix=${prefixMatches ? "match" : "mismatch"} reply=${replyMatches ? "match" : "mismatch"} missed=${missed.length}) — rebuilding`);
 	}
 	// Only reachable when needsRebuild is false — user-facing history rewrites
 	// (/compact, session_tree, /new, fork) usually set needsRebuild or clear
@@ -698,7 +797,7 @@ function syncSharedSession(
 	convertAndImportMessages(session, priorMessages, customToolNameToSdk);
 	session.save();
 	verifyWrittenSession(session.jsonlPath, session.sessionId, session.messages.length, cwd);
-	sharedSession = { sessionId: session.sessionId, cursor: priorMessages.length, cwd };
+	sharedSession = { sessionId: session.sessionId, cursor: priorMessages.length, cwd, historyKey: historyKey(priorMessages) };
 	if (previousSessionId === undefined) {
 		debug(`Case 2: first turn with ${priorMessages.length} prior messages → session ${session.sessionId.slice(0, 8)}, ${session.messages.length} records`);
 	} else if (preserveId) {
@@ -728,6 +827,10 @@ export const __test = {
 	},
 	syncSharedSession,
 	promptAndWait,
+	historyKey,
+	replyKey,
+	discoverModels,
+	getModels: () => MODELS,
 };
 
 // --- Provider helpers: tool name mapping ---
@@ -1237,6 +1340,7 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 	// Upstream #9548: pi-ai >= 0.85.2 passes a normalized transcript (prompt + tools carried by
 	// system messages). Read both shapes so this provider works before and after that change.
 	const { messages: convoMessages, systemPrompt: baseSystemPrompt, tools: declaredTools } = readTranscript(context);
+	const cwd = (options as { cwd?: string } | undefined)?.cwd ?? process.cwd();
 
 	// DEBUG: trace followUp message triggering
 	const lastMsgRole = convoMessages[convoMessages.length - 1]?.role;
@@ -1245,6 +1349,9 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 	const activeQuery = ctx().activeQuery !== null;
 	const allResults = activeQueryContexts.size > 0 ? extractAllToolResults(context) : [];
 	const resultCtx = allResults.length > 0 ? contextForToolResults(allResults) : undefined;
+	// Every provider call carries pi's full history, and tool results make it
+	// grow mid-turn. Track the newest snapshot for the end-of-turn commit.
+	(resultCtx ?? ctx()).latestMessages = convoMessages;
 	const isReentrantUserQuery = activeQuery && lastMsgRole === "user" && allResults.length === 0;
 	if (isReentrantUserQuery) {
 		debug(`provider: active query user-only call treated as reentrant fresh query, waitingHandlers=${ctx().pendingToolCalls.size}, ctx.msgs=${convoMessages.length}`);
@@ -1303,7 +1410,7 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 			}
 		}
 
-		if (sharedSession) sharedSession.cursor = convoMessages.length;
+		if (sharedSession) sharedSession = commitSessionState(sharedSession.sessionId, convoMessages, cwd);
 		resultCtx.latestCursor = Math.max(resultCtx.latestCursor, convoMessages.length);
 		return stream;
 	}
@@ -1314,7 +1421,7 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 	const lastMsg = convoMessages[convoMessages.length - 1];
 	if (lastMsg?.role === "toolResult") {
 		debug(`provider: orphaned tool result after abort, emitting end_turn`);
-		if (sharedSession) sharedSession.cursor = convoMessages.length;
+		if (sharedSession) sharedSession = commitSessionState(sharedSession.sessionId, convoMessages, cwd);
 		const c = ctx();  // capture current context for the microtask
 		queueMicrotask(() => {
 			c.resetTurnState(model);
@@ -1343,7 +1450,6 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 	queryCtx.latestCursor = 0;
 
 	const { mcpTools, customToolNameToSdk, customToolNameToPi } = resolveMcpTools(declaredTools, askCodebuddyToolName);
-	const cwd = (options as { cwd?: string } | undefined)?.cwd ?? process.cwd();
 	const syncResult = syncSharedSession(convoMessages, cwd, customToolNameToSdk, model.id, Boolean(isReentrant));
 	const { sessionId: resumeSessionId } = syncResult;
 	const promptBlocks = extractUserPromptBlocks(convoMessages);
@@ -1398,6 +1504,9 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 	const cliModel = codebuddyModelId(model);
 	const extraArgs: Record<string, string | null> = { model: cliModel };
 	if (strictMcpConfigEnabled) extraArgs["strict-mcp-config"] = null;
+	// A system prompt past the argv budget goes through --system-prompt-file;
+	// otherwise the child never spawns on Windows (issue #30).
+	const promptRouting = routeSystemPrompt(systemPrompt, extraArgs);
 
 	const childEnv = buildCodebuddyEnv(providerSettings);
 	const queryOptions: NonNullable<Parameters<typeof query>[0]["options"]> = {
@@ -1406,8 +1515,8 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 		tools: [],
 		permissionMode: "bypassPermissions",
 		includePartialMessages: true,
-		systemPrompt,
-		extraArgs,
+		...(promptRouting.systemPrompt ? { systemPrompt: promptRouting.systemPrompt } : {}),
+		extraArgs: promptRouting.extraArgs,
 		...(effort ? { effort } : {}),
 		...(settingSources ? { settingSources } : {}),
 		...(mcpServers ? { mcpServers } : {}),
@@ -1420,7 +1529,8 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 		`model=${cliModel} msgs=${convoMessages.length} tools=${mcpTools.length}`,
 		`resume=${resumeSessionId?.slice(0, 8) ?? "none"} effort=${effort ?? "default"}`,
 		`appendSys=${appendSystemPrompt} strictMcp=${strictMcpConfigEnabled}`,
-		`promptLen=${promptText.length}${promptBlocks ? " [+images]" : ""}`);
+		`promptLen=${promptText.length}${promptBlocks ? " [+images]" : ""}`,
+		`sysPromptLen=${systemPrompt?.length ?? 0} sysPromptFile=${promptRouting.extraArgs?.["system-prompt-file"] ? "yes" : "no"}`);
 
 	// 3. Start SDK query (wait for model discovery + serialize SDK subprocess access)
 	let wasAborted = false;
@@ -1479,7 +1589,11 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 			} else if (sessionId) {
 				const cursor = Math.max(convoMessages.length, queryCtx.latestCursor, sharedSession?.cursor ?? 0);
 				debug(`provider: query done, session=${sessionId.slice(0, 8)}, cursor=${cursor}`);
-				sharedSession = { sessionId, cursor, cwd };
+				// The turn's assistant reply is not part of pi's context yet; pi appends
+				// it before the next call. Remember its fingerprint so an edited reply
+				// (or a fork) is detected instead of resuming the stale transcript.
+				const committed = (queryCtx.latestMessages ?? convoMessages).slice(0, cursor);
+				sharedSession = commitSessionState(sessionId, committed, cwd, queryCtx.turnOutput ?? undefined);
 			}
 
 			while (queryCtx.deferredUserMessages.length > 0 && !isReentrant && !wasAborted) {
@@ -1501,7 +1615,10 @@ function streamCodebuddySdk(model: Model<any>, context: Context, options?: Simpl
 				try {
 					const { capturedSessionId: contSid } = await consumeQuery(contQuery, customToolNameToPi, model, () => wasAborted, queryCtx);
 					const sid = contSid ?? sharedSession?.sessionId;
-					if (sid) sharedSession = { sessionId: sid, cursor: sharedSession?.cursor ?? 0, cwd };
+					if (sid) {
+						const cursor = Math.max(convoMessages.length, queryCtx.latestCursor, sharedSession?.cursor ?? 0);
+						sharedSession = commitSessionState(sid, (queryCtx.latestMessages ?? convoMessages).slice(0, cursor), cwd, queryCtx.turnOutput ?? undefined);
+					}
 				} catch (contError) {
 					debug(`provider: continuation query error:`, contError);
 					break;
@@ -1615,11 +1732,13 @@ async function promptAndWait(
 		"strict-mcp-config": null,
 		...(modelId !== undefined ? { model: modelId } : {}),
 	};
+	const promptRouting = routeSystemPrompt(askSystemPrompt, extraArgs);
 
 	debug("askCodebuddy:",
 		`mode=${mode} model=${modelId ?? "CLI default"} effort=${effort ?? "default"}`,
 		`isolated=${options?.isolated ?? false} resume=${resumeSessionId?.slice(0, 8) ?? "none"}`,
-		`sysPrompt=${Boolean(askSystemPrompt)} promptLen=${prompt.length}`);
+		`sysPrompt=${Boolean(askSystemPrompt)} promptLen=${prompt.length}` +
+			(promptRouting.systemPrompt ? "" : promptRouting.extraArgs?.["system-prompt-file"] ? " sysPromptFile=yes" : ""));
 
 	const sdkQuery = runQuery({
 		prompt,
@@ -1629,9 +1748,9 @@ async function promptAndWait(
 			permissionMode: "bypassPermissions",
 			...(disallowedTools.length ? { disallowedTools } : {}),
 			...(effort ? { effort } : {}),
-			systemPrompt: askSystemPrompt,
+			...(promptRouting.systemPrompt ? { systemPrompt: promptRouting.systemPrompt } : {}),
 			settingSources: [] as SettingSource[],
-			extraArgs,
+			extraArgs: promptRouting.extraArgs,
 			...(resumeSessionId ? { resume: resumeSessionId } : {}),
 			...(options?.isolated ? { persistSession: false } : {}),
 			...(codebuddyExecutable ? { pathToCodebuddyCode: codebuddyExecutable } : {}),
@@ -1771,30 +1890,14 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 		}
 	};
 	await withSdkGate(async (signal) => {
-		let q: ReturnType<typeof startQuery> | undefined;
-		// On gate timeout the signal aborts: supportedModels() never settles,
-		// so the finally below would never run — close the transport here or
-		// the codebuddy-headless child outlives the gate and leaks.
-		const abortTeardown = () => {
-			if (q) closeQueryTransport(q, "discoverModels:aborted", { log: debug });
-		};
-		signal.addEventListener("abort", abortTeardown, { once: true });
 		try {
-			q = startQuery({
-				prompt: " ",
-				options: {
-					maxTurns: 0,
-					permissionMode: "bypassPermissions",
-					tools: [],
-					env: buildCodebuddyEnv(providerSettings),
-					...(providerSettings.pathToCodebuddyCode ? { pathToCodebuddyCode: providerSettings.pathToCodebuddyCode } : {}),
-				},
-			});
-			const supported = await q.supportedModels();
-			await q.return().catch(() => {});
-			if (!supported.length) return;
+			// The signal closes the discovery CLI when the gate times out, so a
+			// hung request cannot outlive the gate and leak a child.
+			const catalog = await readModelCatalog(signal);
+			const listed = catalog.models.length ? catalog.models : catalog.simplified;
+			if (!listed.length) return;
 			MODELS = buildModels(
-				rawModelsFromSdk(supported as any),
+				rawModelsFromSdk(listed as any),
 				providerSettings.modelOverrides ? undefined : providerSettings,
 				providerSettings.modelOverrides,
 			);
@@ -1821,13 +1924,6 @@ async function discoverModels(pi: ExtensionAPI): Promise<void> {
 			// otherwise the previously selected codebuddy model disappears
 			// from /model after `pi -r` and the user must re-pick it.
 			recoverFromCache(err);
-		} finally {
-			// supportedModels() never iterates the query, so the SDK's cleanup()
-			// (the only place the transport is closed) never runs here — close it
-			// explicitly or the codebuddy-headless child leaks for the host's
-			// lifetime. Idempotent, so a completed iterator is a harmless no-op.
-			signal.removeEventListener("abort", abortTeardown);
-			if (q) closeQueryTransport(q, "discoverModels", { log: debug });
 		}
 	}, { timeoutMs: DISCOVERY_TIMEOUT_MS }).catch(recoverFromCache);
 }
@@ -2071,4 +2167,23 @@ export default async function (pi: ExtensionAPI) {
 			},
 		});
 	}
+
+	// --- /codebuddy-models: catalog with credits and limits ---
+	pi.registerCommand("codebuddy-models", {
+		description: "List CodeBuddy models with credits per turn, context window, and thinking levels",
+		handler: async (args, ctx) => {
+			const needle = args.trim();
+			if (needle) {
+				const matches = MODELS.filter((m) => m.id.toLowerCase().includes(needle.toLowerCase()));
+				if (matches.length === 1) {
+					ctx.ui.notify(renderModelDetail(matches[0]).join("\n"), "info");
+					return;
+				}
+				if (!matches.length) ctx.ui.notify(`No CodeBuddy model matches "${needle}".`, "warning");
+				else ctx.ui.notify(renderModelCatalog(matches).join("\n"), "info");
+				return;
+			}
+			ctx.ui.notify(renderModelCatalog(MODELS).join("\n"), "info");
+		},
+	});
 }

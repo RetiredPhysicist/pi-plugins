@@ -40,11 +40,14 @@ await startAndWait();
 try {
 	// A few substantive turns so pi has something to compact.
 	console.log("Turn 1: seed history...");
-	await promptAndWait("Pick a number between 1 and 100 and remember it. Reply with just the number.");
+// The bridge seeds the window from the CLI catalog (1M for this model), and pi
+// refuses to compact a session under its minimum size, so the seed turn has to
+// carry real content rather than a single word.
+await promptAndWait(`Pick a number between 1 and 100 and remember it. Then write 120 numbered lines about European capital cities. Include the exact phrase "COMPACT-SEED-ANCHOR" on line 60.`);
 	console.log("Turn 2: more history...");
-	await promptAndWait("Now pick a color. Reply with just the color.");
+await promptAndWait(`Now write 120 numbered lines about well-known chemical elements, each with its symbol and atomic number. Reply with only that list.`);
 	console.log("Turn 3: more history...");
-	await promptAndWait("Now pick a fruit. Reply with just the fruit.");
+await promptAndWait("What number, color, and fruit did you pick earlier? Reply in one short sentence.");
 
 	console.log("Triggering /compact...");
 	await send({ type: "compact" });

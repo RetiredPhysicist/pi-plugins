@@ -4,7 +4,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai/models";
-import { buildModels, codebuddyModelId, rawModelsFromSdk, resolveModel, FALLBACK_MODELS } from "../src/models.js";
+import { buildModels, codebuddyModelId, parseCredits, rawModelsFromSdk, resolveModel, FALLBACK_MODELS } from "../src/models.js";
 
 describe("rawModelsFromSdk", () => {
 	it("maps SDK ModelInfo to pi models", () => {
@@ -66,6 +66,45 @@ describe("rawModelsFromSdk", () => {
 			{ contextWindow: 200_000 },
 		);
 		assert.equal(models[0].contextWindow, 200_000);
+	});
+
+	it("uses the CLI catalog metadata when the backend serves it", () => {
+		const models = rawModelsFromSdk([{
+			id: "claude-sonnet-5",
+			name: "Claude-Sonnet-5",
+			credits: "x1.33 credits",
+			supportsImages: false,
+			supportsReasoning: true,
+			descriptionEn: "Anthropic · Agentic coding",
+			reasoning: { supportedEfforts: ["low", "medium", "high"] },
+		}]);
+		assert.equal(models[0].credits, 1.33);
+		assert.equal(models[0].input.includes("image"), false, "served capability beats the id hint");
+		assert.equal(models[0].description, "Anthropic · Agentic coding");
+		assert.deepEqual(models[0].thinkingLevelMap, { low: "low", medium: "medium", high: "high" });
+	});
+
+	it("leaves unsupported catalog fields unset", () => {
+		const models = rawModelsFromSdk([{ id: "no-metadata", name: "No Metadata" }]);
+		assert.equal(models[0].credits, undefined);
+		assert.equal(models[0].description, undefined);
+		assert.equal(models[0].thinkingLevelMap, undefined);
+	});
+});
+
+describe("parseCredits", () => {
+	it("parses the CLI's credits strings", () => {
+		assert.equal(parseCredits("x0.79"), 0.79);
+		assert.equal(parseCredits("x2.00 credits"), 2);
+		assert.equal(parseCredits("0.11"), 0.11);
+		assert.equal(parseCredits("x0"), 0);
+	});
+
+	it("returns undefined for missing or unparsable values", () => {
+		assert.equal(parseCredits(undefined), undefined);
+		assert.equal(parseCredits(""), undefined);
+		assert.equal(parseCredits("x"), undefined);
+		assert.equal(parseCredits("free"), undefined);
 	});
 });
 

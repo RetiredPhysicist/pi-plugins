@@ -16,8 +16,12 @@ const COMPACT_TIMEOUT = 120_000;
 const TEST_TIMEOUT = 240_000;
 
 const testAgentDir = mkdtempSync(join(tmpdir(), "compact-auto-agent-"));
+// shouldCompact() fires when contextTokens > contextWindow - reserveTokens, so
+// the reserve has to leave only a sliver of the window free. The bridge now
+// seeds the window from the CLI catalog (1M for this model), so a fixed small
+// reserve never crosses the threshold; derive it from the window instead.
 writeFileSync(join(testAgentDir, "settings.json"), JSON.stringify({
-	compaction: { enabled: false, reserveTokens: 198000, keepRecentTokens: 50 },
+	compaction: { enabled: false, reserveTokens: 997_000, keepRecentTokens: 50 },
 }));
 
 const harness = createRpcHarness({

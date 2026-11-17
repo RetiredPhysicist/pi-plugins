@@ -75,6 +75,11 @@ Pick any entry prefixed with `codebuddy/` (for example `codebuddy/deepseek-v4.1-
 
 Tools, skills, extensions, `/compact`, and steer behave the same as with other Pi providers.
 
+Model limits come from the CLI's own catalog, so `/model` shows the context
+window, output limit, image support, and thinking levels the backend actually
+serves. `/codebuddy-models` prints the same catalog as a table, including
+credits per turn, and `/codebuddy-models <substring>` prints one model's details.
+
 ## Configuration
 
 **Optional.** Defaults work for most users.
@@ -165,6 +170,15 @@ Window values the backend reports for a model are remembered per model id in
 last served values instead of the name estimate. Precedence: `modelOverrides` >
 learned > served metadata > estimate. Delete that file to start from estimates
 again (ids the backend no longer serves are dropped automatically).
+
+## Long system prompts
+
+Windows limits a whole command line to 32767 characters. A Pi prompt (preamble,
+tool docs, rules, `AGENTS.md`, skills) is often larger, so the extension sends
+prompts above the argv budget through `--system-prompt-file` and keeps the
+inline `--system-prompt` path below it. The file is content-addressed under
+`~/.pi/agent/codebuddy-sdk-prompts/`, mode `0600`, and reused while the prompt
+is unchanged. `CODEBUDDY_SDK_SYSTEM_PROMPT_DIR` relocates that directory.
 
 ## Privacy
 
