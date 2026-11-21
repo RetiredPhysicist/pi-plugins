@@ -41,13 +41,17 @@ export function routeIntent(
   const available = candidates.filter((p) => providers.has(p));
 
   if (available.length === 0) {
-    const allAvailable = [...providers.keys()];
+    const allAvailable = [...providers.keys()].filter((p) => p !== "parallel");
+    if (providers.has("parallel")) allAvailable.push("parallel");
     return {
       primary: allAvailable[0] ?? "tavily",
       secondary: allAvailable.slice(1),
       intent,
     };
   }
+
+  // Append only after computing the original route, including its no-key fallback.
+  if (providers.has("parallel")) available.push("parallel");
 
   return {
     primary: available[0],

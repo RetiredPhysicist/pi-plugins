@@ -4,10 +4,11 @@ import { Type } from "typebox";
 import { loadConfig, resolveApiKey } from "./config.js";
 import { DEEPSEEK_META, fetchWithDeepSeek } from "./providers/deepseek.js";
 import { TINYFISH_META, TinyFishProvider } from "./providers/tinyfish.js";
+import { fetchParallel } from "./providers/parallel-mcp.js";
 
 interface FetchDetails {
   url: string;
-  provider: "deepseek" | "tinyfish" | "jina" | "local";
+  provider: "deepseek" | "tinyfish" | "jina" | "parallel" | "local";
   length: number;
   contentType?: string;
   error?: string;
@@ -73,7 +74,7 @@ export function registerExtractTool(pi: ExtensionAPI): void {
     name: "web_fetch",
     label: "Fetch URL",
     description:
-      "Fetch a URL and extract readable content as markdown (DeepSeek → TinyFish → Jina → local). Handles GitHub repos, YouTube videos, PDFs, and regular web pages. Use after web_search to read full page content.",
+      "Fetch a URL and extract readable content as markdown (DeepSeek → TinyFish → Parallel (anonymous) → Jina → local). Handles GitHub repos, YouTube videos, PDFs, and regular web pages. Use after web_search to read full page content.",
     promptGuidelines: [
       "Use web_fetch after web_search to read full page content when snippets are insufficient.",
       "Use web_fetch when the user provides a URL directly.",
@@ -123,6 +124,19 @@ export function registerExtractTool(pi: ExtensionAPI): void {
         } catch {
           // fall through to Jina Reader
         }
+      }
+
+      try {
+        const page = await fetchParallel(url, signal, prompt);
+        if (page?.content) {
+          return {
+            content: [{ type: "text", text: page.content }],
+            details: { url, provider: "parallel", length: page.content.length } satisfies FetchDetails,
+          };
+        }
+      } catch {
+        signal?.throwIfAborted();
+        // Free anonymous quota exhausted, timeout or error: retain Jina/local fallback.
       }
 
       try {
@@ -204,13 +218,15 @@ export function registerExtractTool(pi: ExtensionAPI): void {
       if (d?.error) return new Text(theme.fg("error", d.error), 0, 0);
       const len = d?.length ?? 0;
       const via =
-        d?.provider === "deepseek"
-          ? " via DeepSeek"
-          : d?.provider === "tinyfish"
-            ? " via TinyFish"
-            : d?.provider === "jina"
-              ? " via Jina"
-              : "";
+        d?.provider === "parallel"
+          ? " via Parallel (anonymous)"
+          : d?.provider === "deepseek"
+            ? " via DeepSeek"
+            : d?.provider === "tinyfish"
+              ? " via TinyFish"
+              : d?.provider === "jina"
+                ? " via Jina"
+                : "";
       return new Text(theme.fg("success", `✓ ${len} chars fetched${via}`), 0, 0);
     },
   });

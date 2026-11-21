@@ -6,6 +6,7 @@ import { FIRECRAWL_DEV_META, FirecrawlDevProvider } from "./firecrawl-dev.js";
 import { CONTEXT7_META, Context7Provider } from "./context7.js";
 import { TINYFISH_META, TinyFishProvider } from "./tinyfish.js";
 import { DEEPSEEK_META, DeepSeekProvider } from "./deepseek.js";
+import { PARALLEL_META, ParallelProvider } from "./parallel.js";
 import type { SearchProvider } from "./types.js";
 
 export interface ProviderMeta {
@@ -23,10 +24,13 @@ export const PROVIDERS: readonly ProviderMeta[] = [
   CONTEXT7_META,
   TINYFISH_META,
   DEEPSEEK_META,
+  PARALLEL_META,
 ];
 
 export function createProvider(name: string, apiKey?: string): SearchProvider {
   switch (name) {
+    case "parallel":
+      return new ParallelProvider();
     case "exa":
       return new ExaProvider(apiKey ?? "");
     case "tavily":
@@ -52,7 +56,7 @@ export function createAvailableProviders(apiKeys: Record<string, string | undefi
   const providers = new Map<string, SearchProvider>();
   for (const meta of PROVIDERS) {
     const key = apiKeys[meta.name];
-    if (!key && meta.name !== "firecrawl") continue;
+    if (!key && meta.name !== "firecrawl" && meta.name !== "parallel") continue;
     try {
       providers.set(meta.name, createProvider(meta.name, key));
     } catch {
